@@ -17,10 +17,10 @@
         </div>
     </nav>
 
-    {% if registry_error %}
+    {% if registry_error is defined and registry_error %}
     <div class="banner banner-error">Registry parse error: {{ registry_error }}</div>
     {% endif %}
-    {% if manifest_age is not none and manifest_age > 30 %}
+    {% if manifest_age is defined and manifest_age is not none and manifest_age > 30 %}
     <div class="banner banner-warn">Manifest stale — last updated {{ manifest_age }} min ago</div>
     {% endif %}
 
