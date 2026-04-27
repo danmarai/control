@@ -22,7 +22,9 @@
     <h2>Critical Services</h2>
     <div class="card">
         <table class="health-table">
-        {% for unit in units %}
+        {% for category, cat_units in units_by_category %}
+            <tr><td colspan="2" style="padding-top:0.8rem;font-weight:600;color:var(--accent);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;border-bottom:none;">{{ category }}</td></tr>
+            {% for unit in cat_units %}
             <tr>
                 <td>
                     {% if unit.state == 'active' %}
@@ -35,6 +37,7 @@
                 </td>
                 <td>{{ unit.state }}</td>
             </tr>
+            {% endfor %}
         {% endfor %}
         </table>
     </div>

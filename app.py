@@ -7,14 +7,21 @@ import subprocess
 import time
 from datetime import datetime, timezone
 
-from flask import Flask, render_template, redirect, jsonify, Response
+from flask import Flask, render_template, redirect, jsonify, Response, request
 
 from lib.manifest import read_manifest
 from lib.registry import load_registry, merge_projects
 from lib.discovery import discover_all
+from lib.agents import (
+    AGENT_FLEET, get_agent_by_id, gather_fleet_status,
+    get_journal_lines, get_listener_forked_status,
+)
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 HOME = os.path.expanduser("~")
+
+# Phase 1.3 will enable this after SSO + CSRF ships
+ALLOW_RESTART_ACTIONS = False
 
 app = Flask(__name__)
 
@@ -62,13 +69,17 @@ def links():
 
 @app.route("/agents")
 def agents():
-    """Agents tab — real data from cost-tracker JSONL."""
+    """Agents tab — fleet health + cost-tracker JSONL."""
+    # Section A: Fleet health
+    fleet = gather_fleet_status()
+
+    # Section B: Spend (last 7 days) from cost-tracker JSONL
     jsonl_path = os.path.join(
         HOME, ".openclaw/workspace/polymarket-rbi-bot/cost-tracker/api_calls.jsonl"
     )
-    agent_data = {}
-    now = time.time()
-    seven_days_ago = now - 7 * 86400
+    agent_costs = {}
+    now_ts = time.time()
+    seven_days_ago = now_ts - 7 * 86400
 
     if os.path.exists(jsonl_path):
         with open(jsonl_path, "r") as f:
@@ -80,14 +91,13 @@ def agents():
                     entry = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                # The field is 'note' (caller alias)
                 caller = entry.get("note", "unknown")
                 ts_str = entry.get("ts", "")
                 cost = entry.get("real_cost_usd") or entry.get("cost_estimate") or 0
                 model = entry.get("model", "unknown")
 
-                if caller not in agent_data:
-                    agent_data[caller] = {
+                if caller not in agent_costs:
+                    agent_costs[caller] = {
                         "name": caller,
                         "calls_7d": 0,
                         "spend_7d": 0.0,
@@ -96,41 +106,34 @@ def agents():
                         "models": set(),
                     }
 
-                agent_data[caller]["models"].add(model)
-                agent_data[caller]["last_call"] = ts_str
+                agent_costs[caller]["models"].add(model)
+                agent_costs[caller]["last_call"] = ts_str
 
-                # Check if within 7 days
                 try:
                     ts_dt = datetime.fromisoformat(ts_str)
                     ts_epoch = ts_dt.timestamp()
                     if ts_epoch >= seven_days_ago:
-                        agent_data[caller]["calls_7d"] += 1
-                        agent_data[caller]["spend_7d"] += float(cost)
+                        agent_costs[caller]["calls_7d"] += 1
+                        agent_costs[caller]["spend_7d"] += float(cost)
                 except (ValueError, TypeError):
                     pass
 
                 if entry.get("real_cost_usd") and float(entry["real_cost_usd"]) > 0:
-                    agent_data[caller]["has_real_cost"] = True
+                    agent_costs[caller]["has_real_cost"] = True
 
-        # Convert sets to sorted lists for template
-        for a in agent_data.values():
+        for a in agent_costs.values():
             a["models"] = sorted(a["models"])
         jsonl_exists = True
     else:
         jsonl_exists = False
 
-    # Static fleet roster from registry
-    fleet_roster = [
-        "MARVIS", "FORGE", "EDWARD", "BEACON", "ALVIN",
-        "AEGIS", "ORACLE", "SCRIBE", "MEDIC"
-    ]
-
     return render_template(
         "agents.html",
-        agents=sorted(agent_data.values(), key=lambda a: a["name"]),
+        fleet=fleet,
+        agent_costs=sorted(agent_costs.values(), key=lambda a: a["name"]),
         jsonl_exists=jsonl_exists,
-        fleet_roster=fleet_roster,
         now=datetime.now(timezone.utc),
+        allow_restart=ALLOW_RESTART_ACTIONS,
     )
 
 
@@ -178,14 +181,20 @@ def health():
     except (subprocess.SubprocessError, OSError):
         data["disk"] = "unknown"
 
-    # Systemd units
+    # Systemd units — scopes verified 2026-04-27 (Phase 1.2)
     units = [
-        {"name": "viper-dashboard.service", "scope": "system"},
-        {"name": "control-portal.service", "scope": "user"},
-        {"name": "openclaw-gateway.service", "scope": "system"},
-        {"name": "openclaw-medic.service", "scope": "system"},
-        {"name": "life360-context.service", "scope": "system"},
-        {"name": "nginx.service", "scope": "system"},
+        # User-systemd services (the openclaw fleet)
+        {"name": "control-portal.service", "scope": "user", "category": "ops"},
+        {"name": "openclaw-gateway.service", "scope": "user", "category": "agent_platform"},
+        {"name": "openclaw-medic.service", "scope": "user", "category": "monitor"},
+        {"name": "openclaw-aegis.service", "scope": "user", "category": "agent"},
+        {"name": "openclaw-api-proxy.service", "scope": "user", "category": "agent_platform"},
+        {"name": "marvis-memory-webhook.service", "scope": "user", "category": "agent_platform"},
+        # System-systemd services
+        {"name": "alvin.service", "scope": "system", "category": "agent"},
+        {"name": "viper-dashboard.service", "scope": "system", "category": "trading"},
+        {"name": "life360-context.service", "scope": "system", "category": "data_feed"},
+        {"name": "nginx.service", "scope": "system", "category": "infra"},
     ]
     for unit in units:
         try:
@@ -198,6 +207,15 @@ def health():
         except (subprocess.SubprocessError, OSError):
             unit["state"] = "unknown"
     data["units"] = units
+    # Group by category for template rendering
+    from collections import OrderedDict
+    cat_order = ["ops", "agent_platform", "agent", "monitor", "trading", "data_feed", "infra"]
+    by_cat = OrderedDict()
+    for cat in cat_order:
+        group = [u for u in units if u.get("category") == cat]
+        if group:
+            by_cat[cat] = group
+    data["units_by_category"] = list(by_cat.items())
 
     # Pipeline freshness
     cron_log = os.path.join(
@@ -325,21 +343,117 @@ def api_cron_list():
         return "Could not read crontab", 500
 
 
+@app.route("/api/projects/<project_id>/log/tail")
+def project_log_tail(project_id):
+    """Return last N lines of a project's log_path (from registry).
+
+    Read-only. Path-traversal guarded. Caps response at 500 lines.
+    """
+    n = min(int(request.args.get("n", 100)), 500)
+    registry, _ = load_registry(APP_DIR)
+    projects = registry.get("projects", [])
+    proj = next((p for p in projects if p.get("id") == project_id), None)
+    if not proj:
+        return Response(f"Unknown project: {project_id}", 404, mimetype="text/plain")
+    log_path = proj.get("log_path")
+    if not log_path:
+        return Response(f"No log_path defined for {project_id}", 404, mimetype="text/plain")
+    real = os.path.realpath(log_path)
+    if not real.startswith("/home/ubuntu/"):
+        return Response("log_path outside allowed root", 403, mimetype="text/plain")
+    if not os.path.exists(real):
+        return Response(f"Log not found: {log_path}", 404, mimetype="text/plain")
+    try:
+        out = subprocess.run(
+            ["tail", "-n", str(n), real],
+            capture_output=True, text=True, timeout=5
+        ).stdout
+        return Response(out, 200, mimetype="text/plain")
+    except (subprocess.SubprocessError, OSError) as e:
+        return Response(f"Read error: {e}", 500, mimetype="text/plain")
+
+
 @app.route("/api/medic/recent")
 def api_medic_recent():
-    """Last 20 lines of medic log."""
-    log_path = os.path.join(HOME, "owen-hunt-medic/medic.log")
-    if not os.path.realpath(log_path).startswith(HOME):
-        return "403 Forbidden", 403
-    if not os.path.exists(log_path):
-        return "Medic log not found at owen-hunt-medic/medic.log", 404
+    """Last 30 lines from openclaw-medic.service user journal."""
+    try:
+        out = subprocess.run(
+            ["journalctl", "--user", "-u", "openclaw-medic.service",
+             "-n", "30", "--no-pager", "--output=short-iso"],
+            capture_output=True, text=True, timeout=5
+        ).stdout
+        if not out.strip():
+            return Response("No recent medic activity in journal.", 200, mimetype="text/plain")
+        return Response(out, 200, mimetype="text/plain")
+    except (subprocess.SubprocessError, OSError) as e:
+        return Response(f"journalctl error: {e}", 500, mimetype="text/plain")
+
+
+# --- Agent API routes ---
+
+@app.route("/api/agents/<agent_id>/log")
+def api_agent_log(agent_id):
+    """Last 50 journal lines for an agent's unit (or pgrep output for forked)."""
+    agent = get_agent_by_id(agent_id)
+    if not agent:
+        return Response(f"Unknown agent: {agent_id}", 404, mimetype="text/plain")
+
+    if agent["type"] == "listener_forked":
+        pp = agent.get("process_path", "")
+        if pp:
+            try:
+                out = subprocess.run(
+                    ["pgrep", "-af", pp],
+                    capture_output=True, text=True, timeout=2
+                ).stdout
+                return Response(out or "No matching process found.", 200, mimetype="text/plain")
+            except (subprocess.SubprocessError, OSError) as e:
+                return Response(f"pgrep error: {e}", 500, mimetype="text/plain")
+        return Response("No process_path configured for this agent.", 404, mimetype="text/plain")
+
+    if agent["type"] in ("cli_invocation", "remote"):
+        return Response(f"No journal available for {agent['type']} agent.", 200, mimetype="text/plain")
+
+    unit = agent.get("unit")
+    scope = agent.get("scope")
+    if not unit:
+        return Response("No systemd unit configured for this agent.", 404, mimetype="text/plain")
+
+    out = get_journal_lines(unit, scope, n=50)
+    if out:
+        return Response(out, 200, mimetype="text/plain")
+    return Response("No recent journal entries.", 200, mimetype="text/plain")
+
+
+@app.route("/api/agents/<agent_id>/restart", methods=["POST"])
+def api_agent_restart(agent_id):
+    """Restart a user-systemd agent. Disabled by default (Phase 1.3)."""
+    if not ALLOW_RESTART_ACTIONS:
+        return jsonify({"error": "restart actions disabled — Phase 1.3"}), 503
+
+    agent = get_agent_by_id(agent_id)
+    if not agent:
+        return jsonify({"error": f"unknown agent: {agent_id}"}), 404
+    if agent.get("scope") != "user" or not agent.get("unit"):
+        return jsonify({"error": f"agent {agent_id} is not a restartable user-systemd unit"}), 400
+
     try:
         result = subprocess.run(
-            ["tail", "-20", log_path], capture_output=True, text=True, timeout=5
+            ["systemctl", "--user", "restart", agent["unit"]],
+            capture_output=True, text=True, timeout=15
         )
-        return Response(result.stdout, mimetype="text/plain")
-    except (subprocess.SubprocessError, OSError):
-        return "Could not read medic log", 500
+        if result.returncode == 0:
+            return jsonify({"ok": True, "agent": agent_id, "unit": agent["unit"]})
+        return jsonify({"error": result.stderr.strip()}), 500
+    except (subprocess.SubprocessError, OSError) as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/agents.json")
+def api_agents_json():
+    """JSON dump of fleet status data."""
+    fleet = gather_fleet_status()
+    return jsonify(fleet)
 
 
 # --- API ---

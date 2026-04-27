@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2 — 2026-04-27 (Phase 1.2)
+- Added /api/projects/<id>/log/tail (generic per-project log tail with traversal guard).
+- Added /api/medic/recent (reads user-journal — corrected scope from Phase 1.1 mistake).
+- Fixed Health tab systemd unit scopes (user vs system) and expanded coverage.
+- Built out Agents tab: fleet health table, costs, quick actions expando.
+- Added AGENT_FLEET mapping in lib/agents.py covering 12 agents (gateway, openclaw, listeners, monitor, CLI, remote).
+- Added /api/agents/<id>/log and /api/agents.json.
+- Restart action route exists but disabled by default (ALLOW_RESTART_ACTIONS=False, pending Phase 1.3 SSO).
+
 ## v1.1 — 2026-04-27 (Phase 1.1)
 - Projects: split primary vs. secondary with collapsible `<details>` for discovered.
 - Demoted life360 to secondary.

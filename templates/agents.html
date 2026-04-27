@@ -4,37 +4,127 @@
 {% block content %}
 <h1>Agents</h1>
 
-{% if not jsonl_exists %}
-<div class="card">
-    <p class="stub-msg">Agent call log not found. Expected at <code>cost-tracker/api_calls.jsonl</code>.</p>
-</div>
-{% else %}
-<div class="card-grid">
-{% for agent in agents %}
-    <div class="card">
-        <div class="card-header">
-            <h2>{{ agent.name }}</h2>
-            {% if not agent.has_real_cost %}
-            <span class="badge badge-unmonitored">unmonitored</span>
-            {% endif %}
-        </div>
-        <div class="agent-stats">
-            {% if agent.has_real_cost %}
-            <div class="stat">${{ "%.2f" | format(agent.spend_7d) }} <span class="stat-label">last 7d</span></div>
-            {% else %}
-            <div class="stat"><span class="stat-label">cost: unmonitored</span></div>
-            {% endif %}
-            <div class="stat">{{ agent.calls_7d }} calls <span class="stat-label">last 7d</span></div>
-            <div class="stat-small">Last call: {{ agent.last_call or 'unknown' }}</div>
-            <div class="stat-small">Models: {{ agent.models | join(', ') }}</div>
-        </div>
+{# Section A — Fleet Health #}
+<section class="health-section">
+    <h2>Fleet Health</h2>
+    <div class="card" style="overflow-x:auto;">
+        <table class="health-table fleet-table">
+            <thead>
+                <tr>
+                    <th>Agent</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Last seen</th>
+                    <th>Workspace</th>
+                    <th>Memory</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for agent in fleet %}
+                <tr>
+                    <td>
+                        <strong>{{ agent.name }}</strong>
+                        <span class="text-dim" style="font-size:0.78rem;display:block;">{{ agent.role }}</span>
+                    </td>
+                    <td><span class="badge badge-type">{{ agent.type }}</span></td>
+                    <td>
+                        {% if agent.status == 'active' %}
+                        <span class="dot dot-green"></span>active
+                        {% elif agent.status == 'inactive' %}
+                        <span class="dot dot-red"></span>inactive
+                        {% elif agent.status == 'failed' %}
+                        <span class="dot dot-red"></span>failed
+                        {% elif agent.status == 'remote' %}
+                        <span class="dot dot-blue"></span>remote
+                        {% elif agent.status == 'idle' %}
+                        <span class="dot dot-dim"></span>idle
+                        {% else %}
+                        <span class="dot dot-dim"></span>{{ agent.status }}
+                        {% endif %}
+                    </td>
+                    <td>{{ agent.last_seen or '—' }}</td>
+                    <td>{{ agent.workspace_size or '—' }}</td>
+                    <td>{{ agent.memory_size or '—' }}</td>
+                    <td>
+                        {% if agent.has_unit or agent.type == 'listener_forked' %}
+                        <a href="/api/agents/{{ agent.id }}/log" class="btn-sm">Recent log</a>
+                        {% else %}
+                        <span class="text-dim">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
-{% endfor %}
-</div>
-{% endif %}
+</section>
 
+{# Section B — Spend (last 7 days) #}
+<section class="health-section">
+    <h2>Spend (last 7 days)</h2>
+    {% if not jsonl_exists %}
+    <div class="card">
+        <p class="stub-msg">Agent call log not found. Expected at <code>cost-tracker/api_calls.jsonl</code>.</p>
+    </div>
+    {% elif not agent_costs %}
+    <div class="card">
+        <p class="stub-msg">No cost data in the last 7 days.</p>
+    </div>
+    {% else %}
+    <div class="card-grid">
+    {% for agent in agent_costs %}
+        <div class="card">
+            <div class="card-header">
+                <h2>{{ agent.name }}</h2>
+                {% if not agent.has_real_cost %}
+                <span class="badge badge-unmonitored">unmonitored</span>
+                {% endif %}
+            </div>
+            <div class="agent-stats">
+                {% if agent.has_real_cost %}
+                <div class="stat">${{ "%.2f" | format(agent.spend_7d) }} <span class="stat-label">last 7d</span></div>
+                {% else %}
+                <div class="stat"><span class="stat-label">cost: unmonitored</span></div>
+                {% endif %}
+                <div class="stat">{{ agent.calls_7d }} calls <span class="stat-label">last 7d</span></div>
+                <div class="stat-small">Last call: {{ agent.last_call or 'unknown' }}</div>
+                <div class="stat-small">Models: {{ agent.models | join(', ') }}</div>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+    {% endif %}
+</section>
+
+{# Section C — Quick Actions #}
 <details class="discovered-expando" style="margin-top:2rem;">
-    <summary>OpenClaw Fleet Roster</summary>
-    <p class="fleet-roster">{{ fleet_roster | join(' &middot; ') }}</p>
+    <summary>Quick Actions</summary>
+    <div style="padding:1rem 0;">
+        <h3 style="font-size:0.95rem;margin-bottom:0.5rem;">OpenClaw Gateway Portal</h3>
+        <p class="text-dim" style="font-size:0.85rem;margin-bottom:0.5rem;">
+            Localhost only — Phase 1.3 will expose this via nginx. SSH tunnel to access:
+        </p>
+        <code style="font-size:0.82rem;background:var(--bg);padding:0.3rem 0.6rem;border-radius:4px;display:inline-block;">
+            ssh -L 18789:127.0.0.1:18789 ubuntu@3.84.52.62
+        </code>
+
+        <h3 style="font-size:0.95rem;margin-top:1.5rem;margin-bottom:0.5rem;">Restart Services</h3>
+        {% for agent in fleet %}
+            {% if agent.can_restart %}
+            <div style="display:inline-block;margin:0.3rem 0.3rem 0.3rem 0;">
+                {% if allow_restart %}
+                <button class="btn-sm btn-restart" data-agent="{{ agent.id }}" onclick="restartAgent('{{ agent.id }}')">
+                    Restart {{ agent.name }}
+                </button>
+                {% else %}
+                <button class="btn-sm btn-disabled" disabled title="Restart actions disabled — Phase 1.3">
+                    Restart {{ agent.name }} <span class="text-dim">(disabled — see Phase 1.3)</span>
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
 </details>
 {% endblock %}

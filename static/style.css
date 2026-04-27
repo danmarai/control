@@ -195,6 +195,48 @@ h1 { font-size: 1.6rem; margin-bottom: 1.2rem; font-weight: 600; }
     padding: 0.8rem 0;
 }
 
+/* Fleet table (Agents tab) */
+.fleet-table th {
+    text-align: left;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+}
+
+.badge-type {
+    background: rgba(96,165,250,0.15);
+    color: var(--accent);
+}
+
+.dot-blue { background: var(--accent); }
+.dot-dim { background: var(--text-dim); opacity: 0.5; }
+
+.btn-sm {
+    font-size: 0.78rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    background: rgba(96,165,250,0.15);
+    color: var(--accent);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-block;
+}
+.btn-sm:hover { background: rgba(96,165,250,0.25); }
+
+.btn-disabled {
+    font-size: 0.78rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    background: rgba(107,114,128,0.15);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    cursor: not-allowed;
+}
+
 /* Footer */
 footer {
     text-align: center;
