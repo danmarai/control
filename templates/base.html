@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Control{% endblock %} — Fleet Ops</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="topnav">
+        <a href="/" class="brand">Control</a>
+        <div class="nav-links">
+            <a href="/projects" class="{% if active_tab == 'projects' %}active{% endif %}">Projects</a>
+            <a href="/links" class="{% if active_tab == 'links' %}active{% endif %}">Links</a>
+            <a href="/agents" class="{% if active_tab == 'agents' %}active{% endif %}">Agents</a>
+            <a href="/health" class="{% if active_tab == 'health' %}active{% endif %}">Health</a>
+        </div>
+    </nav>
+
+    {% if registry_error %}
+    <div class="banner banner-error">Registry parse error: {{ registry_error }}</div>
+    {% endif %}
+    {% if manifest_age is not none and manifest_age > 30 %}
+    <div class="banner banner-warn">Manifest stale — last updated {{ manifest_age }} min ago</div>
+    {% endif %}
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <span>Control v1.0 — fleet ops for dmarantz.com</span>
+    </footer>
+    <script src="/static/app.js"></script>
+</body>
+</html>

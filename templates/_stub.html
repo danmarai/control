@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% set active_tab = tab_name|lower %}
+{% block title %}{{ tab_name }}{% endblock %}
+{% block content %}
+<h1>{{ tab_name }}</h1>
+<div class="card">
+    <p class="stub-msg">{{ message }}</p>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% set active_tab = "links" %}
+{% block title %}Links{% endblock %}
+{% block content %}
+<h1>Links</h1>
+{% for cat in links %}
+<section class="link-section">
+    <h2>{{ cat.category }}</h2>
+    <ul class="link-list">
+    {% for item in cat.items %}
+        <li><a href="{{ item.url }}" target="_blank">{{ item.label }}</a></li>
+    {% endfor %}
+    </ul>
+</section>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,14 @@
+[Unit]
+Description=Control Portal — fleet ops dashboard
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ubuntu/control
+ExecStart=/usr/bin/python3 /home/ubuntu/control/app.py
+Restart=on-failure
+RestartSec=5
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=default.target
