@@ -7,7 +7,7 @@
 <section class="link-section">
     <h2>{{ cat.category }}</h2>
     <ul class="link-list">
-    {% for item in cat.items %}
+    {% for item in cat['items'] %}
         <li><a href="{{ item.url }}" target="_blank">{{ item.label }}</a></li>
     {% endfor %}
     </ul>
