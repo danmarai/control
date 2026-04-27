@@ -14,7 +14,7 @@ http_address = "127.0.0.1:4180"
 reverse_proxy = true
 
 cookie_name = "_dmarantz_auth"
-cookie_domain = ".dmarantz.com"
+cookie_domains = [ ".dmarantz.com" ]
 cookie_secure = true
 cookie_httponly = true
 cookie_samesite = "lax"
