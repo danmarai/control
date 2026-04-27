@@ -4,7 +4,89 @@
 {% block content %}
 <h1>Agents</h1>
 
-{# Section A — Fleet Health #}
+{# ═══ Section: Continental Trio — Dispatch + Telemetry (ported from VIPER Phase 4) ═══ #}
+<section class="health-section">
+    <h2>Continental Trio — Dispatch &amp; Telemetry</h2>
+
+    {# Stat cards #}
+    <div class="card-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="card">
+            <div class="card-header"><h2>Today — Tasks</h2></div>
+            <div id="ag-today-count" style="font-size:1.6rem;font-weight:700;">—</div>
+            <div id="ag-today-tokens" class="text-dim" style="font-size:0.72rem;margin-top:4px;"></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h2>Today — Sim Cost</h2></div>
+            <div id="ag-today-cost" style="font-size:1.6rem;font-weight:700;">—</div>
+            <div id="ag-today-real" class="text-dim" style="font-size:0.72rem;margin-top:4px;">$0.00 real (subscription)</div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h2>Last 7d — Tasks</h2></div>
+            <div id="ag-7d-count" style="font-size:1.6rem;font-weight:700;">���</div>
+            <div id="ag-7d-tokens" class="text-dim" style="font-size:0.72rem;margin-top:4px;"></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h2>Last 7d — Sim Cost</h2></div>
+            <div id="ag-7d-cost" style="font-size:1.6rem;font-weight:700;">—</div>
+            <div id="ag-running" class="text-dim" style="font-size:0.72rem;margin-top:4px;"></div>
+        </div>
+    </div>
+
+    {# Sparklines #}
+    <div class="card-grid" style="grid-template-columns: repeat(2, 1fr); margin-top:14px;">
+        <div class="card">
+            <h2 style="font-size:0.78rem;margin-bottom:6px;">Winston — daily sim cost (7d)</h2>
+            <svg id="ag-spark-winston" viewBox="0 0 200 60" preserveAspectRatio="none" style="width:100%;height:60px;"></svg>
+            <div id="ag-spark-winston-label" class="text-dim" style="font-size:0.66rem;margin-top:4px;">—</div>
+        </div>
+        <div class="card">
+            <h2 style="font-size:0.78rem;margin-bottom:6px;">Chron — daily sim cost (7d)</h2>
+            <svg id="ag-spark-chron" viewBox="0 0 200 60" preserveAspectRatio="none" style="width:100%;height:60px;"></svg>
+            <div id="ag-spark-chron-label" class="text-dim" style="font-size:0.66rem;margin-top:4px;">—</div>
+        </div>
+    </div>
+
+    {# Per-caller spend table #}
+    <div class="card" style="margin-top:14px;">
+        <h2>Per-caller spend (today)</h2>
+        <table class="health-table" style="font-size:0.78rem;">
+            <thead><tr>
+                <th>Caller</th><th>Spent today</th><th>Budget/day</th><th style="width:40%;">Used</th>
+            </tr></thead>
+            <tbody id="ag-budget-body"></tbody>
+        </table>
+    </div>
+
+    {# Dispatch form #}
+    <div class="card" style="margin-top:14px;">
+        <h2>Dispatch</h2>
+        <div style="display:grid;grid-template-columns:140px 1fr 120px;gap:10px;align-items:start;margin-top:8px;">
+            <select id="ag-disp-agent" style="padding:8px;border-radius:6px;border:1px solid var(--border-color,#333);background:var(--bg,#fff);font-family:inherit;font-size:0.78rem;">
+                <option value="winston">winston</option>
+                <option value="chron">chron</option>
+            </select>
+            <textarea id="ag-disp-prompt" placeholder="Prompt for the agent…" rows="3" style="padding:8px;border-radius:6px;border:1px solid var(--border-color,#333);background:var(--bg,#fff);font-family:inherit;font-size:0.78rem;resize:vertical;"></textarea>
+            <button id="ag-disp-go" class="btn-sm" style="padding:8px 14px;font-weight:700;cursor:pointer;">DISPATCH</button>
+        </div>
+        <div id="ag-disp-result" class="text-dim" style="margin-top:8px;font-size:0.74rem;min-height:18px;"></div>
+    </div>
+
+    {# Recent dispatches table #}
+    <div class="card" style="margin-top:14px;overflow-x:auto;">
+        <h2>Recent dispatches</h2>
+        <table class="health-table" style="font-size:0.74rem;">
+            <thead><tr>
+                <th>When</th><th>Agent</th><th>Caller</th><th>Status</th><th>Dur</th><th>Tokens</th><th>Sim $</th><th>Commits</th><th>Prompt</th>
+            </tr></thead>
+            <tbody id="ag-tasks-body"></tbody>
+        </table>
+        <div id="ag-tasks-empty" style="display:none;text-align:center;padding:40px;" class="text-dim">
+            No agent dispatches yet.
+        </div>
+    </div>
+</section>
+
+{# ═══ Section: Fleet Health (existing 12-agent table) ═���═ #}
 <section class="health-section">
     <h2>Fleet Health</h2>
     <div class="card" style="overflow-x:auto;">
@@ -50,7 +132,7 @@
                         {% if agent.has_unit or agent.type == 'listener_forked' %}
                         <a href="/api/agents/{{ agent.id }}/log" class="btn-sm">Recent log</a>
                         {% else %}
-                        <span class="text-dim">—</span>
+                        <span class="text-dim">���</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -60,7 +142,7 @@
     </div>
 </section>
 
-{# Section B — Spend (last 7 days) #}
+{# Section: Spend (last 7 days) — existing cost-tracker rollup #}
 <section class="health-section">
     <h2>Spend (last 7 days)</h2>
     {% if not jsonl_exists %}
@@ -97,17 +179,18 @@
     {% endif %}
 </section>
 
-{# Section C — Quick Actions #}
+{# Section: Quick Actions #}
 <details class="discovered-expando" style="margin-top:2rem;">
     <summary>Quick Actions</summary>
     <div style="padding:1rem 0;">
         <h3 style="font-size:0.95rem;margin-bottom:0.5rem;">OpenClaw Gateway Portal</h3>
         <p class="text-dim" style="font-size:0.85rem;margin-bottom:0.5rem;">
-            Localhost only — Phase 1.3 will expose this via nginx. SSH tunnel to access:
+            Access via SSH tunnel — see the
+            <a href="/docs/gateway-tunnel" style="font-weight:600;">Gateway Tunnel docs</a>.
         </p>
-        <code style="font-size:0.82rem;background:var(--bg);padding:0.3rem 0.6rem;border-radius:4px;display:inline-block;">
-            ssh -L 18789:127.0.0.1:18789 ubuntu@3.84.52.62
-        </code>
+        <a href="/docs/gateway-tunnel" class="btn-sm" style="display:inline-block;margin-bottom:1rem;">
+            Access OpenClaw Gateway (via SSH tunnel)
+        </a>
 
         <h3 style="font-size:0.95rem;margin-top:1.5rem;margin-bottom:0.5rem;">Restart Services</h3>
         {% for agent in fleet %}
@@ -127,4 +210,230 @@
         {% endfor %}
     </div>
 </details>
+
+{# ── Tail log modal ── #}
+<div id="ag-tail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:1000;padding:40px;">
+    <div style="max-width:1100px;margin:0 auto;background:var(--card-bg,#1a1a2e);border:1px solid var(--border-color,#333);border-radius:10px;padding:18px;max-height:85vh;display:flex;flex-direction:column;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div>
+                <div id="ag-tail-title" style="font-size:0.9rem;font-weight:600;">—</div>
+                <div id="ag-tail-meta" class="text-dim" style="font-size:0.68rem;margin-top:2px;">—</div>
+            </div>
+            <button id="ag-tail-close" class="btn-sm" style="cursor:pointer;">CLOSE</button>
+        </div>
+        <pre id="ag-tail-body" style="flex:1;background:var(--bg,#0a0f1a);border:1px solid var(--border-color,#333);border-radius:6px;padding:12px;font-size:0.72rem;overflow:auto;white-space:pre-wrap;line-height:1.5;margin:0;">loading…</pre>
+    </div>
+</div>
+
+<script>
+/* ── Continental dispatch JS (ported from VIPER Phase 4) ─── */
+(function() {
+    var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+
+    function fmtMoney(n) {
+        if (n == null) return '—';
+        if (n < 0) return '∞';
+        return '$' + Number(n).toFixed(4);
+    }
+    function fmtTokens(n) {
+        if (n == null) return '—';
+        if (n >= 1e6) return (n/1e6).toFixed(2) + 'M tok';
+        if (n >= 1e3) return (n/1e3).toFixed(1) + 'k tok';
+        return n + ' tok';
+    }
+    function fmtAgo(ts) {
+        if (!ts) return '—';
+        var s = (Date.now()/1000) - ts;
+        if (s < 60) return Math.floor(s) + 's ago';
+        if (s < 3600) return Math.floor(s/60) + 'm ago';
+        if (s < 86400) return (s/3600).toFixed(1) + 'h ago';
+        return (s/86400).toFixed(1) + 'd ago';
+    }
+    function statusPill(s) {
+        var colors = {success:'#28a745', error:'#dc3545', running:'#448aff',
+                      queued:'#ffc107', exited:'#ffc107', skipped:'#6c757d'};
+        var c = colors[s] || '#6c757d';
+        return '<span style="color:'+c+';font-weight:600;">'+(s||'?')+'</span>';
+    }
+    function escHtml(s) {
+        if (!s) return '';
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function renderSpark(svgId, labelId, values, color) {
+        var svg = document.getElementById(svgId);
+        var lbl = document.getElementById(labelId);
+        if (!svg) return;
+        svg.innerHTML = '';
+        if (!values || values.length === 0) { lbl.textContent = 'no data'; return; }
+        var w = 200, h = 60, pad = 4;
+        var max = Math.max.apply(null, [0.0001].concat(values));
+        var step = (w - 2*pad) / Math.max(1, values.length - 1);
+        var pts = values.map(function(v, i) {
+            var x = pad + i * step;
+            var y = h - pad - (v / max) * (h - 2*pad);
+            return x.toFixed(1) + ',' + y.toFixed(1);
+        }).join(' ');
+        svg.innerHTML =
+            '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="1.5"/>' +
+            values.map(function(v, i) {
+                var x = pad + i * step;
+                var y = h - pad - (v / max) * (h - 2*pad);
+                return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="2" fill="' + color + '"/>';
+            }).join('');
+        var total = values.reduce(function(s,v){return s+v;}, 0);
+        lbl.textContent = '7d total $' + total.toFixed(4) + ' \u2022 peak $' + max.toFixed(4);
+    }
+
+    function refreshAgents() {
+        Promise.all([
+            fetch('/api/agents/summary').then(function(r){return r.json();}),
+            fetch('/api/agents/tasks').then(function(r){return r.json();})
+        ]).then(function(results) {
+            var s = results[0], t = results[1];
+
+            document.getElementById('ag-today-count').textContent  = s.today.count;
+            document.getElementById('ag-today-tokens').textContent = fmtTokens(s.today.tokens);
+            document.getElementById('ag-today-cost').textContent   = fmtMoney(s.today.sim_cost_usd);
+            document.getElementById('ag-7d-count').textContent     = s.last_7d.count;
+            document.getElementById('ag-7d-tokens').textContent    = fmtTokens(s.last_7d.tokens);
+            document.getElementById('ag-7d-cost').textContent      = fmtMoney(s.last_7d.sim_cost_usd);
+
+            var running = (t.tasks || []).filter(function(x){return x.status_live === 'running';}).length;
+            document.getElementById('ag-running').textContent = running > 0
+                ? (running + ' task' + (running===1?'':'s') + ' running now') : 'idle';
+
+            // budget table
+            var bbody = document.getElementById('ag-budget-body');
+            bbody.innerHTML = '';
+            (s.budgets || []).forEach(function(b) {
+                var pct = b.pct_used == null ? null : Math.min(100, b.pct_used);
+                var barColor = pct == null ? '#6c757d' : pct < 60 ? '#28a745' : pct < 90 ? '#ffc107' : '#dc3545';
+                var barInner = pct == null
+                    ? '<span class="text-dim" style="font-size:0.72rem;">unlimited (tracked)</span>'
+                    : '<div style="height:8px;background:var(--border-color,#333);border-radius:4px;overflow:hidden;">'
+                      + '<div style="width:'+pct+'%;height:100%;background:'+barColor+';"></div>'
+                      + '</div><span class="text-dim" style="font-size:0.7rem;">'+pct+'% used</span>';
+                bbody.innerHTML += '<tr><td>'+b.caller+'</td><td>'+fmtMoney(b.spent_usd_today)+'</td>'
+                    + '<td>'+(b.budget_usd_per_day < 0 ? '∞' : '$'+b.budget_usd_per_day.toFixed(2))+'</td>'
+                    + '<td>'+barInner+'</td></tr>';
+            });
+
+            // tasks table
+            var tbody = document.getElementById('ag-tasks-body');
+            tbody.innerHTML = '';
+            var tasks = t.tasks || [];
+            if (tasks.length === 0) {
+                document.getElementById('ag-tasks-empty').style.display = 'block';
+            } else {
+                document.getElementById('ag-tasks-empty').style.display = 'none';
+                tasks.forEach(function(task) {
+                    var led = task.ledger || {};
+                    var dur = led.duration_s ? Math.round(led.duration_s)+'s' : '—';
+                    var toks = led.total_tokens ? fmtTokens(led.total_tokens) : '���';
+                    var cost = led.sim_cost_usd != null ? fmtMoney(led.sim_cost_usd) : '—';
+                    var commits = (led.commits||[]).map(function(h){return h.slice(0,7);}).join(', ') || '—';
+                    var promptShort = escHtml((task.prompt_summary || '').slice(0, 80));
+                    tbody.innerHTML += '<tr>'
+                        + '<td><a href="#" class="ag-tail-link" data-task-id="'+task.task_id+'" data-agent="'+task.agent+'">'+fmtAgo(task.start_ts)+'</a></td>'
+                        + '<td><strong>'+escHtml(task.agent)+'</strong></td>'
+                        + '<td>'+escHtml(task.caller)+'</td>'
+                        + '<td>'+statusPill(task.status_live || task.status)+'</td>'
+                        + '<td>'+dur+'</td>'
+                        + '<td>'+toks+'</td>'
+                        + '<td>'+cost+'</td>'
+                        + '<td class="text-dim" style="font-size:0.7rem;">'+commits+'</td>'
+                        + '<td class="text-dim">'+promptShort+'</td>'
+                        + '</tr>';
+                });
+            }
+        }).catch(function(e) { console.error('refreshAgents failed', e); });
+
+        // sparklines
+        fetch('/api/agents/cost_series?days=7').then(function(r){return r.json();}).then(function(d) {
+            renderSpark('ag-spark-winston', 'ag-spark-winston-label', (d.series||{}).winston || [0,0,0,0,0,0,0], '#448aff');
+            renderSpark('ag-spark-chron',   'ag-spark-chron-label',   (d.series||{}).chron   || [0,0,0,0,0,0,0], '#b388ff');
+        }).catch(function(e) { console.error('spark refresh failed', e); });
+    }
+
+    // Dispatch button
+    var dispBtn = document.getElementById('ag-disp-go');
+    if (dispBtn) dispBtn.addEventListener('click', function() {
+        var agent = document.getElementById('ag-disp-agent').value;
+        var prompt = document.getElementById('ag-disp-prompt').value.trim();
+        var out = document.getElementById('ag-disp-result');
+        if (!prompt) { out.innerHTML = '<span style="color:#dc3545;">prompt is empty.</span>'; return; }
+        dispBtn.disabled = true; dispBtn.textContent = '…'; out.textContent = 'dispatching…';
+        fetch('/api/agents/dispatch', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRF-Token': CSRF},
+            body: JSON.stringify({agent: agent, prompt: prompt}),
+        }).then(function(r){ return r.json().then(function(obj){return {ok: r.ok, obj: obj};}); })
+        .then(function(res) {
+            if (res.ok && res.obj.task_id) {
+                out.innerHTML = 'dispatched <strong>' + agent + '</strong> task '
+                    + '<a href="#" class="ag-tail-link" data-task-id="' + res.obj.task_id + '" data-agent="' + agent + '">'
+                    + res.obj.task_id + '</a>';
+                document.getElementById('ag-disp-prompt').value = '';
+                setTimeout(refreshAgents, 1500);
+            } else {
+                out.innerHTML = '<span style="color:#dc3545;">'
+                    + escHtml(res.obj.error || res.obj.detail || 'dispatch failed') + '</span>';
+            }
+        }).catch(function(e) {
+            out.innerHTML = '<span style="color:#dc3545;">' + e + '</span>';
+        }).finally(function() {
+            dispBtn.disabled = false; dispBtn.textContent = 'DISPATCH';
+        });
+    });
+
+    // Tail log modal
+    var tailTimer = null, tailTaskId = null;
+    function pullTail() {
+        if (!tailTaskId) return;
+        fetch('/api/agents/tasks/' + tailTaskId + '/log?tail=400').then(function(r) {
+            if (!r.ok) return r.json().then(function(err) {
+                document.getElementById('ag-tail-body').textContent = '\u26a0 ' + (err.error || ('http ' + r.status));
+            });
+            return r.json().then(function(d) {
+                var body = document.getElementById('ag-tail-body');
+                var meta = document.getElementById('ag-tail-meta');
+                var wasAtBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 20;
+                body.textContent = (d.lines || []).join('\n');
+                meta.textContent = (d.log_path || '') + ' \u2022 ' + (d.tail || 0) + ' lines \u2022 ' + ((d.size_bytes||0)/1024).toFixed(1) + ' kB';
+                if (wasAtBottom) body.scrollTop = body.scrollHeight;
+            });
+        }).catch(function(e) { console.error('tail pull failed', e); });
+    }
+    function openTail(taskId, agentName) {
+        tailTaskId = taskId;
+        document.getElementById('ag-tail-title').textContent = (agentName ? agentName + ' \u2022 ' : '') + taskId;
+        document.getElementById('ag-tail-modal').style.display = 'block';
+        pullTail();
+        if (tailTimer) clearInterval(tailTimer);
+        tailTimer = setInterval(pullTail, 3000);
+    }
+    function closeTail() {
+        document.getElementById('ag-tail-modal').style.display = 'none';
+        if (tailTimer) { clearInterval(tailTimer); tailTimer = null; }
+        tailTaskId = null;
+    }
+    var closeBtn = document.getElementById('ag-tail-close');
+    if (closeBtn) closeBtn.addEventListener('click', closeTail);
+
+    // Delegate .ag-tail-link clicks
+    document.addEventListener('click', function(ev) {
+        var a = ev.target.closest('.ag-tail-link');
+        if (!a) return;
+        ev.preventDefault();
+        openTail(a.dataset.taskId, a.dataset.agent);
+    });
+
+    // Initial load + auto-refresh every 30s
+    refreshAgents();
+    setInterval(refreshAgents, 30000);
+})();
+</script>
 {% endblock %}

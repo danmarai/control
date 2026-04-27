@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Gateway Tunnel{% endblock %}
+{% block content %}
+<h1>OpenClaw Gateway — SSH Tunnel Access</h1>
+
+<section class="health-section">
+    <div class="card">
+        <h2>Why tunnel-only?</h2>
+        <p style="max-width:700px;line-height:1.6;">
+            The OpenClaw Gateway runs on <code>127.0.0.1:18789</code> and is not exposed
+            publicly. This avoids adding another attack surface to the EC2 instance.
+            Access is via SSH tunnel only — your browser connects to <code>localhost:18789</code>
+            which forwards through the encrypted SSH session to the server.
+        </p>
+    </div>
+</section>
+
+<section class="health-section">
+    <div class="card">
+        <h2>Step 1 — Open a terminal on your laptop</h2>
+        <p>Any terminal works: Terminal.app, iTerm2, Windows Terminal, etc.</p>
+    </div>
+</section>
+
+<section class="health-section">
+    <div class="card">
+        <h2>Step 2 — Run this command</h2>
+        <div style="display:flex;align-items:center;gap:12px;margin:12px 0;">
+            <code id="tunnel-cmd" style="flex:1;background:var(--bg);padding:10px 14px;border-radius:6px;font-size:0.88rem;display:block;user-select:all;">ssh -i ~/.ssh/cowork-key.pem -L 18789:127.0.0.1:18789 ubuntu@3.84.52.62</code>
+            <button id="copy-btn" onclick="copyTunnelCmd()" class="btn-sm" style="white-space:nowrap;cursor:pointer;">Copy</button>
+        </div>
+    </div>
+</section>
+
+<section class="health-section">
+    <div class="card">
+        <h2>Step 3 — Open the Gateway</h2>
+        <p>Once the tunnel is up, open <a href="http://localhost:18789" style="color:var(--link-color,#448aff);">http://localhost:18789</a> in your browser.</p>
+    </div>
+</section>
+
+<section class="health-section">
+    <div class="card">
+        <h2>Troubleshooting</h2>
+        <table class="health-table" style="max-width:700px;">
+            <thead>
+                <tr><th>Problem</th><th>Fix</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Permission denied</strong></td>
+                    <td><code>chmod 600 ~/.ssh/cowork-key.pem</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Connection refused</strong></td>
+                    <td>Confirm the gateway service is running — check the <a href="/health">Health tab</a>.</td>
+                </tr>
+                <tr>
+                    <td><strong>Port already in use</strong></td>
+                    <td>Kill the stale tunnel: <code>lsof -ti:18789 | xargs kill -9</code></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="health-section">
+    <div class="card">
+        <p style="color:var(--text-dim);font-size:0.85rem;">
+            Tunnel closes when you <kbd>Ctrl-C</kbd> the SSH session.
+        </p>
+    </div>
+</section>
+
+<script>
+function copyTunnelCmd() {
+    var text = document.getElementById('tunnel-cmd').textContent.trim();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+            var btn = document.getElementById('copy-btn');
+            btn.textContent = 'Copied!';
+            setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+        });
+    } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        var btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+    }
+}
+</script>
+{% endblock %}

@@ -9,6 +9,8 @@ ExecStart=/usr/bin/python3 /home/ubuntu/control/app.py
 Restart=on-failure
 RestartSec=5
 Environment="PYTHONUNBUFFERED=1"
+EnvironmentFile=-/home/ubuntu/.openclaw/.env
+EnvironmentFile=-/home/ubuntu/control/.flask-secret-env
 
 [Install]
 WantedBy=default.target

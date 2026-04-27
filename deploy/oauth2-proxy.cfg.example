@@ -1,0 +1,29 @@
+# oauth2-proxy configuration for *.dmarantz.com SSO
+# Deploy to: /etc/oauth2-proxy/oauth2-proxy.cfg (root:root mode 600)
+# Dan: replace the three REPLACE_FROM_DAN values before enabling the service.
+
+provider = "google"
+client_id = "REPLACE_FROM_DAN"
+client_secret = "REPLACE_FROM_DAN"
+cookie_secret = "REPLACE_FROM_DAN"
+
+email_domains = [ "*" ]
+authenticated_emails_file = "/etc/oauth2-proxy/emails"
+
+http_address = "127.0.0.1:4180"
+reverse_proxy = true
+
+cookie_name = "_dmarantz_auth"
+cookie_domain = ".dmarantz.com"
+cookie_secure = true
+cookie_httponly = true
+cookie_samesite = "lax"
+cookie_expire = "720h"        # 30 days
+cookie_refresh = "1h"
+
+whitelist_domains = [ ".dmarantz.com" ]
+
+skip_provider_button = true   # one-click → straight to Google
+pass_authorization_header = true
+pass_user_headers = true
+set_xauthrequest = true

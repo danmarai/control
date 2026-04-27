@@ -2,20 +2,29 @@
 
 Fleet ops portal for Dan's EC2 enterprise.
 
+## Auth
+
+**Current (Phase 1.2):** nginx htpasswd on each subdomain.
+
+**Planned (Phase 1.3, awaiting Dan's credentials):** Google OAuth SSO via `oauth2-proxy`. One Google sign-in (`daniel.marantz@gmail.com`) unlocks all `*.dmarantz.com` subdomains. Cookie persists ~30 days. Templates are staged in `deploy/` — cutover blocked on Dan pasting his Google OAuth `client_id`, `client_secret`, and `cookie_secret` into `/etc/oauth2-proxy/oauth2-proxy.cfg`.
+
+**Adding a new authorized email (after SSO is live):** Append the email to `/etc/oauth2-proxy/emails` and restart `oauth2-proxy.service`.
+
 ## Tabs
 
 - **Projects**: registry + auto-discovered services, repos, cron jobs. Split into Primary (explicit, important) and Discovered/Secondary (auto-discovered + demoted). Secondary section is behind a collapsible `<details>` expando, collapsed by default.
 - **Links**: bookmarks to API consoles, dashboards, admin panels, server infra.
-- **Agents**: live agent status + cost rollup from `cost-tracker/api_calls.jsonl`. Shows calls, spend, models per agent. "Unmonitored" badge if no real cost data.
+- **Agents**: Continental trio dispatch + telemetry (stat cards, sparklines, dispatch form, recent dispatches) above the 12-agent fleet table + cost rollup. See "Agents view" below.
 - **Health**: system health — host stats, critical systemd units, pipeline freshness, TLS cert expiry.
 
 ## Agents view
 
-The Agents tab has three sections:
+The Agents tab has sections (top to bottom):
 
-1. **Fleet Health** — table showing every agent's status, last-seen timestamp, workspace size, memory file size, and a "Recent log" action link. Status is pulled live from `systemctl`, `journalctl`, or `pgrep` depending on agent type.
-2. **Spend (last 7 days)** — cost rollup from `cost-tracker/api_calls.jsonl`. Shows calls, spend, models per agent. "Unmonitored" badge if no real cost data.
-3. **Quick Actions** — collapsible section with SSH tunnel instructions for the OpenClaw Gateway portal and per-agent restart buttons (disabled by default — see below).
+1. **Continental Trio — Dispatch & Telemetry** (Phase 1.3) — 4 stat cards (today/7d tasks + cost), daily sparklines for Winston and Chron, per-caller spend table, dispatch form, and recent dispatches table. Data from `/home/ubuntu/.openclaw/workspace/polymarket-rbi-bot/cache/agent_costs.jsonl` and `/tmp/agent_tasks`.
+2. **Fleet Health** — table showing every agent's status, last-seen timestamp, workspace size, memory file size, and a "Recent log" action link. Status is pulled live from `systemctl`, `journalctl`, or `pgrep` depending on agent type.
+3. **Spend (last 7 days)** — cost rollup from `cost-tracker/api_calls.jsonl`. Shows calls, spend, models per agent. "Unmonitored" badge if no real cost data.
+4. **Quick Actions** — collapsible section with gateway tunnel docs link and per-agent restart buttons.
 
 ### `AGENT_FLEET` mapping
 
@@ -25,7 +34,7 @@ The fleet roster lives in `lib/agents.py` as `AGENT_FLEET`. Each entry has: `id`
 
 ### `ALLOW_RESTART_ACTIONS`
 
-Set to `False` in `app.py`. The restart route (`POST /api/agents/<id>/restart`) exists but returns 503 until Phase 1.3 ships SSO + CSRF protection. Dan flips it to `True` after reviewing the auth story.
+Set to `False` in `app.py`. The restart route (`POST /api/agents/<id>/restart`) returns 503 until Dan flips it to `True` after SSO is live. Both dispatch and restart endpoints are protected by Origin check + CSRF token + audit logging.
 
 ## Routes
 
@@ -34,15 +43,21 @@ Set to `False` in `app.py`. The restart route (`POST /api/agents/<id>/restart`) 
 | `/` | Redirect to `/projects` |
 | `/projects` | Projects tab (primary + secondary expando) |
 | `/links` | Links tab (categorized bookmarks) |
-| `/agents` | Agents tab (fleet health + costs + quick actions) |
+| `/agents` | Agents tab (dispatch + fleet health + costs + quick actions) |
 | `/health` | Health tab (host, services grouped by category, pipeline, certs) |
+| `/docs/gateway-tunnel` | SSH tunnel cheat sheet for OpenClaw Gateway |
 | `/forge/latest-weekly` | Serve latest Forge weekly report HTML |
 | `/life360/recent` | Render current Life360 location state |
 | `/api/cron/list` | Read-only crontab listing (text/plain) |
 | `/api/medic/recent` | Last 30 lines from medic user journal |
 | `/api/projects/<id>/log/tail` | Generic per-project log tail with path-traversal guard |
+| `/api/agents/summary` | Continental trio: today/7d task counts, costs, budgets |
+| `/api/agents/tasks` | Recent agent tasks joined with ledger entries |
+| `/api/agents/tasks/<task_id>/log` | Tail a dispatched task's run log |
+| `/api/agents/cost_series` | Daily sim-cost rollup per agent (default 7d) |
+| `/api/agents/dispatch` | POST — proxy dispatch to gateway (CSRF + Origin protected) |
 | `/api/agents/<id>/log` | Last 50 journal lines for agent (or pgrep for forked) |
-| `/api/agents/<id>/restart` | POST — restart user-systemd agent (disabled, returns 503) |
+| `/api/agents/<id>/restart` | POST — restart user-systemd agent (CSRF + Origin protected, disabled) |
 | `/api/agents.json` | JSON dump of fleet status data |
 | `/api/projects.json` | Projects as JSON |
 | `/api/links.json` | Links as JSON |
@@ -92,4 +107,4 @@ Served via nginx reverse proxy at `https://control.dmarantz.com`.
 
 ## Stack
 
-Flask + YAML registry + systemd/cron auto-discovery. Dark theme. nginx + htpasswd + LetsEncrypt.
+Flask + YAML registry + systemd/cron auto-discovery. Dark theme. nginx + htpasswd (→ oauth2-proxy planned) + LetsEncrypt.

@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Control{% endblock %} — Fleet Ops</title>
+    {% if csrf_token is defined and csrf_token %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    {% endif %}
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
