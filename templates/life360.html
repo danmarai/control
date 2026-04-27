@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% set active_tab = "" %}
+{% block title %}Life360 Recent{% endblock %}
+{% block content %}
+<h1>Life360 — Recent Location</h1>
+
+{% if stale %}
+<div class="banner banner-warn">
+    Data is stale — last updated {{ (age_seconds // 60) }} min ago
+    <span class="badge badge-stale">stale</span>
+</div>
+{% endif %}
+
+<p class="text-dim" style="margin-bottom:1rem;">Updated: {{ updated_at }}</p>
+
+{% for key, val in data.items() if key not in ('updated_at', 'poll_success') %}
+<section class="health-section">
+    <h2>{{ key }}</h2>
+    <div class="card">
+        {% if val is mapping %}
+        <table class="health-table">
+            {% for k, v in val.items() %}
+            <tr><td>{{ k }}</td><td>{{ v }}</td></tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>{{ val }}</p>
+        {% endif %}
+    </div>
+</section>
+{% endfor %}
+{% endblock %}

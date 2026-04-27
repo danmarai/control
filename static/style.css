@@ -87,6 +87,41 @@ h1 { font-size: 1.6rem; margin-bottom: 1.2rem; font-weight: 600; }
 }
 .card-links a:hover { color: var(--accent-hover); text-decoration: underline; }
 
+/* Per-project links */
+.project-links {
+    list-style: none;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+}
+.project-links li { padding: 0.15rem 0; }
+.project-links a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.8rem;
+}
+.project-links a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+/* Section counts */
+.count { color: var(--text-dim); font-weight: 400; font-size: 0.9em; }
+
+/* Discovered expando */
+.discovered-expando {
+    margin-top: 2rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.8rem 1.2rem;
+}
+.discovered-expando summary {
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    padding: 0.4rem 0;
+}
+.discovered-expando summary:hover { color: var(--text); }
+.discovered-expando .card-grid { margin-top: 1rem; }
+
 /* Badges */
 .badge {
     font-size: 0.7rem;
@@ -119,6 +154,46 @@ h1 { font-size: 1.6rem; margin-bottom: 1.2rem; font-weight: 600; }
 
 /* Stub */
 .stub-msg { color: var(--text-dim); font-size: 0.95rem; padding: 2rem 0; text-align: center; }
+
+/* Health page */
+.health-section { margin-bottom: 1.5rem; }
+.health-section h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+
+.health-table { width: 100%; border-collapse: collapse; }
+.health-table td {
+    padding: 0.4rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+}
+.health-table tr:last-child td { border-bottom: none; }
+.health-table code { font-size: 0.82rem; }
+
+.dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.4rem;
+}
+.dot-green { background: #34d399; }
+.dot-red { background: var(--error); }
+
+.text-dim { color: var(--text-dim); }
+
+/* Agent stats */
+.agent-stats { margin-top: 0.5rem; }
+.stat { font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
+.stat-label { font-weight: 400; font-size: 0.82rem; color: var(--text-dim); }
+.stat-small { font-size: 0.82rem; color: var(--text-dim); }
+
+.badge-unmonitored { background: var(--warn); color: #000; }
+.badge-stale { background: var(--error); color: #fff; }
+
+.fleet-roster {
+    color: var(--text-dim);
+    font-size: 0.92rem;
+    padding: 0.8rem 0;
+}
 
 /* Footer */
 footer {

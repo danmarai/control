@@ -3,24 +3,23 @@
 {% block title %}Projects{% endblock %}
 {% block content %}
 <h1>Projects</h1>
+
+<h2>Primary <span class="count">({{ primary_count }})</span></h2>
 <div class="card-grid">
-{% for p in projects %}
-    <div class="card {% if p.type == 'deprecated' %}card-deprecated{% endif %}">
-        <div class="card-header">
-            <h2>{{ p.name or p.id }}</h2>
-            {% if p.get('discovered') %}<span class="badge badge-discovered">discovered</span>{% endif %}
-            {% if p.type == 'planned' %}<span class="badge badge-planned">planned</span>{% endif %}
-            {% if p.type == 'deprecated' %}<span class="badge badge-deprecated">deprecated</span>{% endif %}
-        </div>
-        <p class="card-desc">{{ p.description or '' }}</p>
-        <div class="card-meta">
-            {% if p.tags %}<span class="tags">{{ p.tags | join(', ') }}</span>{% endif %}
-        </div>
-        <div class="card-links">
-            {% if p.dashboard_url %}<a href="{{ p.dashboard_url }}" target="_blank">Dashboard</a>{% endif %}
-            {% if p.repo_url %}<a href="{{ p.repo_url }}" target="_blank">Repo</a>{% endif %}
-        </div>
-    </div>
+{% for p in projects if p.tier == 'primary' %}
+    {% include "_project_card.html" %}
 {% endfor %}
 </div>
+
+<details class="discovered-expando">
+  <summary>
+    Discovered &amp; secondary
+    <span class="count">({{ secondary_count }})</span>
+  </summary>
+  <div class="card-grid">
+  {% for p in projects if p.tier == 'secondary' %}
+      {% include "_project_card.html" %}
+  {% endfor %}
+  </div>
+</details>
 {% endblock %}

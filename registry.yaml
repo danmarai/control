@@ -1,6 +1,7 @@
 projects:
   - id: viper
     name: VIPER Trading Pipeline
+    tier: primary
     type: trading
     description: Multi-venue algo trading pipeline (Polymarket, Kalshi, Coinbase, Hyperliquid)
     status_source:
@@ -12,9 +13,13 @@ projects:
     cron_pattern: cron_pipeline.sh
     code_path: /home/ubuntu/.openclaw/workspace/polymarket-rbi-bot
     tags: [trading, paper, llm]
+    links:
+      - { label: "Pipeline log (live)", url: "/api/projects/viper/log/tail" }
+      - { label: "Discord #viper", url: "https://discord.com/channels/1476774555379830947" }
 
   - id: forge
     name: FORGE Health Coach
+    tier: primary
     type: agent
     description: Fitness/health agent — daily check-ins, DEXA prep, CPAP, B12
     status_source:
@@ -25,9 +30,12 @@ projects:
     log_path: /home/ubuntu/.openclaw/forge-workspace/logs/checkin.log
     code_path: /home/ubuntu/.openclaw/forge-workspace
     tags: [agent, health]
+    links:
+      - { label: "Latest weekly report", url: "/forge/latest-weekly" }
 
   - id: frameapp
     name: Frame Ambient Engine
+    tier: primary
     type: web
     description: Samsung Frame TV wallpaper generator + control panel
     status_source:
@@ -37,9 +45,12 @@ projects:
     repo_url: null
     code_path: /home/ubuntu/frame-art
     tags: [web, ai-image]
+    links:
+      - { label: "Frame App (live)", url: "https://frameapp.dmarantz.com" }
 
   - id: openclaw_fleet
     name: OpenClaw Agent Fleet
+    tier: primary
     type: agent_platform
     description: MARVIS, FORGE, EDWARD, BEACON, ALVIN + listeners (AEGIS, ORACLE, SCRIBE, MEDIC)
     status_source:
@@ -49,9 +60,12 @@ projects:
     repo_url: https://github.com/danmarai/marvis-workspace
     code_path: /home/ubuntu/.openclaw
     tags: [agents, platform]
+    links:
+      - { label: "Discord (Marvis server)", url: "https://discord.com/channels/1476774555379830947" }
 
   - id: medic
     name: Owen Hunt Medic
+    tier: primary
     type: monitor
     description: Fleet watchdog — restarts dead agents, alerts on failures
     status_source:
@@ -60,9 +74,12 @@ projects:
     dashboard_url: null
     code_path: /home/ubuntu/owen-hunt-medic
     tags: [monitor, watchdog]
+    links:
+      - { label: "Recent restarts", url: "/api/medic/recent" }
 
   - id: life360
     name: Life360 Context Poller
+    tier: secondary
     type: data_feed
     description: Location data feeding MARVIS context
     status_source:
@@ -71,9 +88,12 @@ projects:
     dashboard_url: null
     code_path: /home/ubuntu/life360-context
     tags: [data, location]
+    links:
+      - { label: "Recent location", url: "/life360/recent" }
 
   - id: polydata
     name: Polymarket Data Warehouse
+    tier: primary
     type: data_pipeline
     description: 47k markets, 120k trades; refreshed every 4h
     status_source:
@@ -82,18 +102,23 @@ projects:
       stale_after_minutes: 270
     code_path: /home/ubuntu/.openclaw/workspace/polymarket-rbi-bot/polydata
     tags: [data, polymarket]
+    links:
+      - { label: "Markets API", url: "/api/projects.json" }
 
   - id: cortex
     name: Cortex
+    tier: primary
     type: planned
     description: Placeholder — Dan will define this
     status_source:
       type: planned
     dashboard_url: https://cortex.dmarantz.com
     tags: [planned]
+    links: []
 
   - id: control
     name: Control (this portal)
+    tier: primary
     type: ops
     description: Fleet ops portal — you are here
     status_source:
@@ -103,14 +128,17 @@ projects:
     repo_url: https://github.com/danmarai/control
     code_path: /home/ubuntu/control
     tags: [ops, dashboard]
+    links: []
 
   - id: viper_legacy
     name: VIPER (legacy tree)
+    tier: secondary
     type: deprecated
     description: Older ~/.openclaw/workspace/viper/ tree. Orphan dashboard ran on :8099 for 25 days. Archived during Phase 1 deploy.
     status_source:
       type: deprecated
     tags: [deprecated]
+    links: []
 
 links:
   - category: API Consoles & Usage
@@ -137,13 +165,21 @@ links:
       - { label: "VIPER (live)",       url: "https://viper.dmarantz.com" }
       - { label: "Frame App",          url: "https://frameapp.dmarantz.com" }
       - { label: "Cortex (placeholder)", url: "https://cortex.dmarantz.com" }
+      - { label: "Forge Latest Weekly", url: "/forge/latest-weekly" }
+      - { label: "Life360 Recent",      url: "/life360/recent" }
 
   - category: Comms & Ops
     items:
-      - { label: "Discord (Marvis server)", url: "https://discord.com/channels/@me" }
+      - { label: "Discord (Marvis server)", url: "https://discord.com/channels/1476774555379830947" }
       - { label: "Life360 Web",        url: "https://www.life360.com/" }
 
   - category: Domain & Cert Admin
     items:
       - { label: "Dreamhost DNS",      url: "https://panel.dreamhost.com/index.cgi?tree=domain.manage" }
       - { label: "LetsEncrypt status", url: "https://letsencrypt.status.io/" }
+
+  - category: Server & Infra
+    items:
+      - { label: "EC2 Instance (3.84.52.62)", url: "https://us-east-1.console.aws.amazon.com/ec2/home?region=us-east-1#InstanceDetails:instanceId=" }
+      - { label: "Security Groups",    url: "https://us-east-1.console.aws.amazon.com/ec2/home?region=us-east-1#SecurityGroups:" }
+      - { label: "Cron tab (read-only)", url: "/api/cron/list" }

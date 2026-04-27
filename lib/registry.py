@@ -18,9 +18,15 @@ def load_registry(app_dir):
 def merge_projects(registry_projects, discovered_projects):
     """Merge: registry wins by id. Discovered entries get a 'discovered' badge."""
     reg_by_id = {p["id"]: p for p in registry_projects}
+    # Ensure every registry project has a tier (default: primary)
+    for p in registry_projects:
+        p.setdefault("tier", "primary")
+        p.setdefault("links", [])
     merged = list(registry_projects)
     for dp in discovered_projects:
         if dp["id"] not in reg_by_id:
-            dp["discovered"] = True
+            dp.setdefault("tier", "secondary")
+            dp.setdefault("discovered", True)
+            dp.setdefault("links", [])
             merged.append(dp)
     return merged

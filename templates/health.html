@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% set active_tab = "health" %}
+{% block title %}Health{% endblock %}
+{% block content %}
+<h1>Health</h1>
+
+<section class="health-section">
+    <h2>Host</h2>
+    <div class="card">
+        <table class="health-table">
+            <tr><td>Uptime</td><td>{{ uptime }}</td></tr>
+            <tr><td>Load avg</td><td>{{ loadavg }}</td></tr>
+            <tr><td>Memory total</td><td>{{ mem_total }}</td></tr>
+            <tr><td>Memory available</td><td>{{ mem_available }}</td></tr>
+            <tr><td>Memory free</td><td>{{ mem_free }}</td></tr>
+            <tr><td>Disk /</td><td><code>{{ disk }}</code></td></tr>
+        </table>
+    </div>
+</section>
+
+<section class="health-section">
+    <h2>Critical Services</h2>
+    <div class="card">
+        <table class="health-table">
+        {% for unit in units %}
+            <tr>
+                <td>
+                    {% if unit.state == 'active' %}
+                    <span class="dot dot-green"></span>
+                    {% else %}
+                    <span class="dot dot-red"></span>
+                    {% endif %}
+                    {{ unit.name }}
+                    <span class="text-dim">({{ unit.scope }})</span>
+                </td>
+                <td>{{ unit.state }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+    </div>
+</section>
+
+<section class="health-section">
+    <h2>Pipeline Freshness</h2>
+    <div class="card">
+        {% if pipeline_age_hours is not none %}
+            <p>
+                Last cron pipeline run: <strong>{{ pipeline_age_hours }}h ago</strong>
+                {% if pipeline_age_hours > 5 %}
+                <span class="badge badge-stale">stale</span>
+                {% endif %}
+            </p>
+        {% else %}
+            <p class="text-dim">cron_pipeline.log not found</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="health-section">
+    <h2>Cert Expiry</h2>
+    <div class="card">
+        <table class="health-table">
+        {% for cert in certs %}
+            <tr>
+                <td>{{ cert.domain }}</td>
+                <td>
+                    {% if cert.days_left is not none %}
+                        {{ cert.days_left }} days
+                        {% if cert.days_left < 14 %}
+                        <span class="badge badge-stale">expiring soon</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-dim">{{ cert.error or 'unknown' }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </table>
+    </div>
+</section>
+{% endblock %}

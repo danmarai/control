@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% set active_tab = "agents" %}
+{% block title %}Agents{% endblock %}
+{% block content %}
+<h1>Agents</h1>
+
+{% if not jsonl_exists %}
+<div class="card">
+    <p class="stub-msg">Agent call log not found. Expected at <code>cost-tracker/api_calls.jsonl</code>.</p>
+</div>
+{% else %}
+<div class="card-grid">
+{% for agent in agents %}
+    <div class="card">
+        <div class="card-header">
+            <h2>{{ agent.name }}</h2>
+            {% if not agent.has_real_cost %}
+            <span class="badge badge-unmonitored">unmonitored</span>
+            {% endif %}
+        </div>
+        <div class="agent-stats">
+            {% if agent.has_real_cost %}
+            <div class="stat">${{ "%.2f" | format(agent.spend_7d) }} <span class="stat-label">last 7d</span></div>
+            {% else %}
+            <div class="stat"><span class="stat-label">cost: unmonitored</span></div>
+            {% endif %}
+            <div class="stat">{{ agent.calls_7d }} calls <span class="stat-label">last 7d</span></div>
+            <div class="stat-small">Last call: {{ agent.last_call or 'unknown' }}</div>
+            <div class="stat-small">Models: {{ agent.models | join(', ') }}</div>
+        </div>
+    </div>
+{% endfor %}
+</div>
+{% endif %}
+
+<details class="discovered-expando" style="margin-top:2rem;">
+    <summary>OpenClaw Fleet Roster</summary>
+    <p class="fleet-roster">{{ fleet_roster | join(' &middot; ') }}</p>
+</details>
+{% endblock %}

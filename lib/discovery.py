@@ -73,6 +73,8 @@ def discover_all():
             "id": repo["id"],
             "name": repo["id"],
             "type": "discovered",
+            "tier": "secondary",
+            "discovered": True,
             "description": f"Git repo at {repo['path']}",
             "code_path": repo["path"],
             "tags": ["discovered", repo["source"]],
