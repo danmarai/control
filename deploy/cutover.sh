@@ -57,12 +57,17 @@ python3 - "$REPO/deploy/oauth2-proxy.cfg.example" "$OAUTH_DIR/oauth2-proxy.cfg" 
 import sys, pathlib
 src, dst, cid, csec, ck = sys.argv[1:6]
 text = pathlib.Path(src).read_text()
-# Replace the three REPLACE_FROM_DAN occurrences in the order they appear
-# in the template: client_id, client_secret, cookie_secret.
-parts = text.split("REPLACE_FROM_DAN")
+# Match the quoted placeholder ("REPLACE_FROM_DAN") so we don't pick up the
+# word in the comment line at the top of the template.
+marker = '"REPLACE_FROM_DAN"'
+parts = text.split(marker)
 if len(parts) != 4:
-    raise SystemExit(f"Template has {len(parts)-1} placeholders, expected 3")
-out = parts[0] + cid + parts[1] + csec + parts[2] + ck + parts[3]
+    raise SystemExit(f"Template has {len(parts)-1} quoted placeholders, expected 3")
+# Substitute in order: client_id, client_secret, cookie_secret.
+out = (parts[0] + f'"{cid}"'
+       + parts[1] + f'"{csec}"'
+       + parts[2] + f'"{ck}"'
+       + parts[3])
 pathlib.Path(dst).write_text(out)
 PYEOF
 chown root:nogroup "$OAUTH_DIR/oauth2-proxy.cfg"
