@@ -18,10 +18,10 @@ projects:
       - { label: "Discord #viper", url: "https://discord.com/channels/1476774555379830947" }
 
   - id: axe_analyst
-    name: Axe Analyst
+    name: MarAxe Private Hedge Analyst
     tier: primary
     type: trading
-    description: Schwab options risk dashboard plus local-model agent research loop
+    description: Unified Schwab options portfolio watcher, local-model agent research loop, and Discord alerting
     status_source:
       type: launchd_label
       unit: com.openclaw.axe-analyst
@@ -31,8 +31,9 @@ projects:
     code_path: /Users/dmarantz/.openclaw/workspace/axe-agent-hedge
     tags: [trading, options, schwab, local-models]
     links:
+      - { label: "Portfolio Watcher", url: "http://100.84.250.41:8765/" }
       - { label: "Agent Research", url: "http://100.84.250.41:8765/research" }
-      - { label: "Portfolio Risk", url: "http://100.84.250.41:8765/" }
+      - { label: "Axe Alerts", url: "http://100.84.250.41:8765/alerts" }
 
   - id: forge
     name: FORGE Health Coach
@@ -179,7 +180,7 @@ links:
 
   - category: Internal Dashboards
     items:
-      - { label: "Axe Analyst",       url: "http://100.84.250.41:8765" }
+      - { label: "MarAxe Private Hedge Analyst", url: "http://100.84.250.41:8765" }
       - { label: "VIPER (live)",       url: "https://viper.dmarantz.com" }
       - { label: "Frame App",          url: "https://frameapp.dmarantz.com" }
       - { label: "Cortex (placeholder)", url: "https://cortex.dmarantz.com" }
