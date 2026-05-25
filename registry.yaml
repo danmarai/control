@@ -5,17 +5,34 @@ projects:
     type: trading
     description: Multi-venue algo trading pipeline (Polymarket, Kalshi, Coinbase, Hyperliquid)
     status_source:
-      type: systemd_unit
-      unit: viper-dashboard.service
+      type: launchd_label
+      unit: com.openclaw.dashboard
     dashboard_url: https://viper.dmarantz.com
     repo_url: https://github.com/danmarai/marvis-workspace
-    log_path: /home/ubuntu/.openclaw/workspace/polymarket-rbi-bot/cache/cron_pipeline.log
+    log_path: /Users/dmarantz/.openclaw/workspace/polymarket-rbi-bot/cache/cron_pipeline.log
     cron_pattern: cron_pipeline.sh
-    code_path: /home/ubuntu/.openclaw/workspace/polymarket-rbi-bot
+    code_path: /Users/dmarantz/.openclaw/workspace/polymarket-rbi-bot
     tags: [trading, paper, llm]
     links:
       - { label: "Pipeline log (live)", url: "/api/projects/viper/log/tail" }
       - { label: "Discord #viper", url: "https://discord.com/channels/1476774555379830947" }
+
+  - id: axe_analyst
+    name: Axe Analyst
+    tier: primary
+    type: trading
+    description: Schwab options risk dashboard plus local-model agent research loop
+    status_source:
+      type: launchd_label
+      unit: com.openclaw.axe-analyst
+    dashboard_url: http://100.84.250.41:8765
+    repo_url: https://github.com/danmarai/axe-agent-hedge
+    log_path: /Users/dmarantz/.openclaw/logs/axe-analyst.log
+    code_path: /Users/dmarantz/.openclaw/workspace/axe-agent-hedge
+    tags: [trading, options, schwab, local-models]
+    links:
+      - { label: "Agent Research", url: "http://100.84.250.41:8765/research" }
+      - { label: "Portfolio Risk", url: "http://100.84.250.41:8765/" }
 
   - id: forge
     name: FORGE Health Coach
@@ -23,12 +40,12 @@ projects:
     type: agent
     description: Fitness/health agent — daily check-ins, DEXA prep, CPAP, B12
     status_source:
-      type: systemd_unit
-      unit: openclaw-gateway.service
+      type: launchd_label
+      unit: com.openclaw.gateway
     dashboard_url: null
     repo_url: null
-    log_path: /home/ubuntu/.openclaw/forge-workspace/logs/checkin.log
-    code_path: /home/ubuntu/.openclaw/forge-workspace
+    log_path: /Users/dmarantz/.openclaw/forge-workspace/logs/checkin.log
+    code_path: /Users/dmarantz/.openclaw/forge-workspace
     tags: [agent, health]
     links:
       - { label: "Latest weekly report", url: "/forge/latest-weekly" }
@@ -43,7 +60,7 @@ projects:
       url: http://127.0.0.1:3847
     dashboard_url: https://frameapp.dmarantz.com
     repo_url: null
-    code_path: /home/ubuntu/frame-art
+    code_path: /Users/dmarantz/frame-art
     tags: [web, ai-image]
     links:
       - { label: "Frame App (live)", url: "https://frameapp.dmarantz.com" }
@@ -54,11 +71,11 @@ projects:
     type: agent_platform
     description: MARVIS, FORGE, EDWARD, BEACON, ALVIN + listeners (AEGIS, ORACLE, SCRIBE, MEDIC)
     status_source:
-      type: systemd_unit
-      unit: openclaw-gateway.service
+      type: launchd_label
+      unit: com.openclaw.gateway
     dashboard_url: null
     repo_url: https://github.com/danmarai/marvis-workspace
-    code_path: /home/ubuntu/.openclaw
+    code_path: /Users/dmarantz/.openclaw
     tags: [agents, platform]
     links:
       - { label: "Discord (Marvis server)", url: "https://discord.com/channels/1476774555379830947" }
@@ -69,10 +86,10 @@ projects:
     type: monitor
     description: Fleet watchdog — restarts dead agents, alerts on failures
     status_source:
-      type: systemd_unit
-      unit: openclaw-medic.service
+      type: launchd_label
+      unit: com.openclaw.medic
     dashboard_url: null
-    code_path: /home/ubuntu/owen-hunt-medic
+    code_path: /Users/dmarantz/.openclaw
     tags: [monitor, watchdog]
     links:
       - { label: "Recent restarts", url: "/api/medic/recent" }
@@ -83,10 +100,10 @@ projects:
     type: data_feed
     description: Location data feeding MARVIS context
     status_source:
-      type: systemd_unit
-      unit: life360-context.service
+      type: launchd_label
+      unit: com.openclaw.life360-context
     dashboard_url: null
-    code_path: /home/ubuntu/life360-context
+    code_path: /Users/dmarantz/life360-context
     tags: [data, location]
     links:
       - { label: "Recent location", url: "/life360/recent" }
@@ -98,9 +115,9 @@ projects:
     description: 47k markets, 120k trades; refreshed every 4h
     status_source:
       type: cron_log
-      log_path: /home/ubuntu/.openclaw/workspace/polymarket-rbi-bot/cache/polydata/cron.log
+      log_path: /Users/dmarantz/.openclaw/workspace/polymarket-rbi-bot/cache/polydata/cron.log
       stale_after_minutes: 270
-    code_path: /home/ubuntu/.openclaw/workspace/polymarket-rbi-bot/polydata
+    code_path: /Users/dmarantz/.openclaw/workspace/polymarket-rbi-bot/polydata
     tags: [data, polymarket]
     links:
       - { label: "Markets API", url: "/api/projects.json" }
@@ -122,11 +139,11 @@ projects:
     type: ops
     description: Fleet ops portal — you are here
     status_source:
-      type: systemd_unit
-      unit: control-portal.service
-    dashboard_url: https://control.dmarantz.com
+      type: launchd_label
+      unit: com.openclaw.control-portal
+    dashboard_url: http://100.84.250.41:8081
     repo_url: https://github.com/danmarai/control
-    code_path: /home/ubuntu/control
+    code_path: /Users/dmarantz/control
     tags: [ops, dashboard]
     links: []
 
@@ -162,6 +179,7 @@ links:
 
   - category: Internal Dashboards
     items:
+      - { label: "Axe Analyst",       url: "http://100.84.250.41:8765" }
       - { label: "VIPER (live)",       url: "https://viper.dmarantz.com" }
       - { label: "Frame App",          url: "https://frameapp.dmarantz.com" }
       - { label: "Cortex (placeholder)", url: "https://cortex.dmarantz.com" }

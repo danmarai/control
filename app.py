@@ -109,6 +109,17 @@ def _get_context():
     }
 
 
+def _format_bytes(value):
+    """Format a byte count for the health page."""
+    units = ("B", "KiB", "MiB", "GiB", "TiB")
+    amount = float(value)
+    for unit in units:
+        if amount < 1024 or unit == units[-1]:
+            return f"{amount:.1f} {unit}"
+        amount /= 1024
+    return f"{amount:.1f} TiB"
+
+
 # --- Core tabs ---
 
 @app.route("/")
@@ -212,27 +223,40 @@ def health():
     # Host info
     try:
         data["uptime"] = subprocess.run(
-            ["uptime", "-p"], capture_output=True, text=True, timeout=5
+            ["uptime"], capture_output=True, text=True, timeout=5
         ).stdout.strip()
     except (subprocess.SubprocessError, OSError):
         data["uptime"] = "unknown"
 
     try:
-        data["loadavg"] = open("/proc/loadavg").read().strip()
+        data["loadavg"] = ", ".join(f"{value:.2f}" for value in os.getloadavg())
     except OSError:
         data["loadavg"] = "unknown"
 
     # Memory
     try:
-        meminfo = {}
-        for line in open("/proc/meminfo"):
-            parts = line.split(":")
-            if len(parts) == 2:
-                meminfo[parts[0].strip()] = parts[1].strip()
-        data["mem_total"] = meminfo.get("MemTotal", "?")
-        data["mem_free"] = meminfo.get("MemFree", "?")
-        data["mem_available"] = meminfo.get("MemAvailable", "?")
-    except OSError:
+        total_bytes = int(subprocess.run(
+            ["sysctl", "-n", "hw.memsize"],
+            capture_output=True, text=True, timeout=5
+        ).stdout.strip())
+        vm_out = subprocess.run(
+            ["vm_stat"],
+            capture_output=True, text=True, timeout=5
+        ).stdout
+        page_size = 16384
+        for line in vm_out.splitlines():
+            if "page size of" in line:
+                page_size = int(line.split("page size of", 1)[1].split("bytes", 1)[0].strip())
+                break
+        free_pages = 0
+        for line in vm_out.splitlines():
+            if line.startswith(("Pages free:", "Pages speculative:")):
+                free_pages += int(line.split(":", 1)[1].strip().rstrip("."))
+        free_bytes = free_pages * page_size
+        data["mem_total"] = _format_bytes(total_bytes)
+        data["mem_free"] = _format_bytes(free_bytes)
+        data["mem_available"] = _format_bytes(free_bytes)
+    except (subprocess.SubprocessError, OSError, ValueError):
         data["mem_total"] = data["mem_free"] = data["mem_available"] = "?"
 
     # Disk
@@ -248,29 +272,27 @@ def health():
     except (subprocess.SubprocessError, OSError):
         data["disk"] = "unknown"
 
-    # Systemd units — scopes verified 2026-04-27 (Phase 1.2)
+    # launchd services on the Mac Studio.
     units = [
-        # User-systemd services (the openclaw fleet)
-        {"name": "control-portal.service", "scope": "user", "category": "ops"},
-        {"name": "openclaw-gateway.service", "scope": "user", "category": "agent_platform"},
-        {"name": "openclaw-medic.service", "scope": "user", "category": "monitor"},
-        {"name": "openclaw-aegis.service", "scope": "user", "category": "agent"},
-        {"name": "openclaw-api-proxy.service", "scope": "user", "category": "agent_platform"},
-        {"name": "marvis-memory-webhook.service", "scope": "user", "category": "agent_platform"},
-        # System-systemd services
-        {"name": "alvin.service", "scope": "system", "category": "agent"},
-        {"name": "viper-dashboard.service", "scope": "system", "category": "trading"},
-        {"name": "life360-context.service", "scope": "system", "category": "data_feed"},
-        {"name": "nginx.service", "scope": "system", "category": "infra"},
+        {"name": "com.openclaw.control-portal", "scope": "launchd", "category": "ops"},
+        {"name": "com.openclaw.axe-analyst", "scope": "launchd", "category": "trading"},
+        {"name": "com.openclaw.dashboard", "scope": "launchd", "category": "trading"},
+        {"name": "com.openclaw.gateway", "scope": "launchd", "category": "agent_platform"},
+        {"name": "com.openclaw.api-proxy", "scope": "launchd", "category": "agent_platform"},
+        {"name": "com.openclaw.mlx-server", "scope": "launchd", "category": "agent_platform"},
+        {"name": "com.openclaw.aegis", "scope": "launchd", "category": "agent"},
+        {"name": "com.openclaw.oracle", "scope": "launchd", "category": "agent"},
+        {"name": "com.openclaw.scribe", "scope": "launchd", "category": "agent"},
+        {"name": "com.openclaw.medic", "scope": "launchd", "category": "monitor"},
+        {"name": "com.cotcobra.dashboard", "scope": "launchd", "category": "data_feed"},
     ]
     for unit in units:
         try:
-            cmd = ["systemctl"]
-            if unit["scope"] == "user":
-                cmd.append("--user")
-            cmd.extend(["is-active", unit["name"]])
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-            unit["state"] = result.stdout.strip()
+            result = subprocess.run(
+                ["launchctl", "list", unit["name"]],
+                capture_output=True, text=True, timeout=5
+            )
+            unit["state"] = "active" if result.returncode == 0 else "inactive"
         except (subprocess.SubprocessError, OSError):
             unit["state"] = "unknown"
     data["units"] = units
@@ -295,49 +317,13 @@ def health():
     else:
         data["pipeline_age_hours"] = None
 
-    # Cert expiry
-    domains = ["frameapp", "control", "viper", "cortex"]
-    certs = []
-    for domain in domains:
-        fqdn = f"{domain}.dmarantz.com" if domain != "frameapp" else "frameapp"
-        cert_path = f"/etc/letsencrypt/live/{fqdn}/cert.pem"
-        # All domains share control.dmarantz.com cert in this setup
-        if domain != "frameapp":
-            cert_path = f"/etc/letsencrypt/live/control.dmarantz.com/cert.pem"
-        try:
-            result = subprocess.run(
-                ["sudo", "openssl", "x509", "-enddate", "-noout", "-in", cert_path],
-                capture_output=True, text=True, timeout=5
-            )
-            if result.returncode == 0:
-                # Parse: notAfter=Jul 26 15:30:00 2026 GMT
-                end_str = result.stdout.strip().split("=", 1)[1]
-                end_dt = datetime.strptime(end_str, "%b %d %H:%M:%S %Y %Z")
-                days_left = (end_dt - datetime.utcnow()).days
-                certs.append({"domain": fqdn, "days_left": days_left, "error": None})
-            else:
-                certs.append({"domain": fqdn, "days_left": None, "error": result.stderr.strip()})
-        except (subprocess.SubprocessError, OSError, ValueError) as e:
-            certs.append({"domain": fqdn, "days_left": None, "error": str(e)})
-
-    # Also check frameapp cert specifically
-    try:
-        result = subprocess.run(
-            ["sudo", "openssl", "x509", "-enddate", "-noout", "-in",
-             "/etc/letsencrypt/live/frameapp/cert.pem"],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
-            end_str = result.stdout.strip().split("=", 1)[1]
-            end_dt = datetime.strptime(end_str, "%b %d %H:%M:%S %Y %GMT")
-            days_left = (end_dt - datetime.utcnow()).days
-            certs[0] = {"domain": "frameapp", "days_left": days_left, "error": None}
-        else:
-            certs[0] = {"domain": "frameapp", "days_left": None, "error": result.stderr.strip()}
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        certs[0] = {"domain": "frameapp", "days_left": None, "error": str(e)}
-
-    data["certs"] = certs
+    data["certs"] = [
+        {
+            "domain": "tailnet/local",
+            "days_left": None,
+            "error": "Control is currently served directly on the Mac Studio tailnet.",
+        }
+    ]
 
     return render_template("health.html", **data)
 
@@ -426,7 +412,7 @@ def project_log_tail(project_id):
     if not log_path:
         return Response(f"No log_path defined for {project_id}", 404, mimetype="text/plain")
     real = os.path.realpath(log_path)
-    if not real.startswith("/home/ubuntu/"):
+    if not real.startswith("/Users/dmarantz/"):
         return Response("log_path outside allowed root", 403, mimetype="text/plain")
     if not os.path.exists(real):
         return Response(f"Log not found: {log_path}", 404, mimetype="text/plain")
@@ -760,4 +746,7 @@ def healthz():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8081)
+    app.run(
+        host=os.environ.get("CONTROL_BIND_HOST", "0.0.0.0"),
+        port=int(os.environ.get("CONTROL_PORT", "8081")),
+    )
