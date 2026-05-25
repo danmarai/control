@@ -7,26 +7,26 @@
     <div class="card">
         <h2>Why tunnel-only?</h2>
         <p style="max-width:700px;line-height:1.6;">
-            The OpenClaw Gateway runs on <code>127.0.0.1:18789</code> and is not exposed
-            publicly. This avoids adding another attack surface to the EC2 instance.
-            Access is via SSH tunnel only — your browser connects to <code>localhost:18789</code>
-            which forwards through the encrypted SSH session to the server.
+            The OpenClaw Gateway runs on the Mac Studio at <code>127.0.0.1:18789</code>.
+            It is not exposed publicly. Access is via SSH tunnel or from the tailnet.
+            With a tunnel, your browser connects to <code>localhost:18789</code>
+            and forwards through the encrypted SSH session to the Studio.
         </p>
     </div>
 </section>
 
 <section class="health-section">
     <div class="card">
-        <h2>Step 1 — Open a terminal on your laptop</h2>
+        <h2>Step 1 - Open a terminal on your laptop</h2>
         <p>Any terminal works: Terminal.app, iTerm2, Windows Terminal, etc.</p>
     </div>
 </section>
 
 <section class="health-section">
     <div class="card">
-        <h2>Step 2 — Run this command</h2>
+        <h2>Step 2 - Run this command</h2>
         <div style="display:flex;align-items:center;gap:12px;margin:12px 0;">
-            <code id="tunnel-cmd" style="flex:1;background:var(--bg);padding:10px 14px;border-radius:6px;font-size:0.88rem;display:block;user-select:all;">ssh -i ~/.ssh/cowork-key.pem -L 18789:127.0.0.1:18789 ubuntu@3.84.52.62</code>
+            <code id="tunnel-cmd" style="flex:1;background:var(--bg);padding:10px 14px;border-radius:6px;font-size:0.88rem;display:block;user-select:all;">ssh -L 18789:127.0.0.1:18789 dmarantz@100.84.250.41</code>
             <button id="copy-btn" onclick="copyTunnelCmd()" class="btn-sm" style="white-space:nowrap;cursor:pointer;">Copy</button>
         </div>
     </div>
@@ -34,7 +34,7 @@
 
 <section class="health-section">
     <div class="card">
-        <h2>Step 3 — Open the Gateway</h2>
+        <h2>Step 3 - Open the Gateway</h2>
         <p>Once the tunnel is up, open <a href="http://localhost:18789" style="color:var(--link-color,#448aff);">http://localhost:18789</a> in your browser.</p>
     </div>
 </section>
@@ -49,7 +49,7 @@
             <tbody>
                 <tr>
                     <td><strong>Permission denied</strong></td>
-                    <td><code>chmod 600 ~/.ssh/cowork-key.pem</code></td>
+                    <td>Confirm your Studio SSH key is available and has <code>chmod 600</code> permissions.</td>
                 </tr>
                 <tr>
                     <td><strong>Connection refused</strong></td>

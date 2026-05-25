@@ -1,21 +1,21 @@
-"""Auto-discover services, cron jobs, and git repos on this box."""
+"""Auto-discover launchd services, cron jobs, and git repos on this box."""
 
 import os
 import subprocess
 
 
-def discover_systemd_units():
-    """List user systemd service units."""
+def discover_launchd_units():
+    """List launchd labels for the current user session."""
     try:
         out = subprocess.run(
-            ["systemctl", "--user", "list-units", "--type=service", "--no-pager", "--plain"],
+            ["launchctl", "list"],
             capture_output=True, text=True, timeout=10
         )
         units = []
         for line in out.stdout.strip().splitlines()[1:]:  # skip header
             parts = line.split()
-            if parts:
-                units.append(parts[0])
+            if len(parts) >= 3 and parts[2].startswith(("com.openclaw.", "com.cotcobra.")):
+                units.append(parts[2])
         return units
     except (subprocess.SubprocessError, OSError):
         return []
@@ -68,6 +68,16 @@ def discover_git_repos():
 def discover_all():
     """Return a list of discovered project dicts."""
     discovered = []
+    for label in discover_launchd_units():
+        discovered.append({
+            "id": label.replace(".", "_").replace("-", "_"),
+            "name": label,
+            "type": "launchd",
+            "tier": "secondary",
+            "discovered": True,
+            "description": f"launchd service {label}",
+            "tags": ["discovered", "launchd"],
+        })
     for repo in discover_git_repos():
         discovered.append({
             "id": repo["id"],

@@ -5,19 +5,180 @@ import subprocess
 from datetime import datetime, timezone
 
 
+HOME = os.path.expanduser("~")
+OPENCLAW = os.path.join(HOME, ".openclaw")
+LOG_DIR = os.path.join(OPENCLAW, "logs")
+
+
+def _log(name):
+    return os.path.join(LOG_DIR, name)
+
+
 AGENT_FLEET = [
-    {"id": "marvis",   "name": "MARVIS",   "role": "Commander",             "unit": "openclaw-gateway.service",   "scope": "user",   "type": "gateway",          "workspace": None,                                              "memory": "/home/ubuntu/.openclaw/MEMORY.md"},
-    {"id": "forge",    "name": "FORGE",    "role": "Health Coach",          "unit": "openclaw-gateway.service",   "scope": "user",   "type": "openclaw",         "workspace": "/home/ubuntu/.openclaw/forge-workspace",          "memory": "/home/ubuntu/.openclaw/forge-workspace/MEMORY.md"},
-    {"id": "edward",   "name": "EDWARD",   "role": "Engineering",           "unit": "openclaw-gateway.service",   "scope": "user",   "type": "openclaw",         "workspace": None,                                              "memory": None},
-    {"id": "beacon",   "name": "BEACON",   "role": "Briefings",             "unit": "openclaw-gateway.service",   "scope": "user",   "type": "openclaw",         "workspace": None,                                              "memory": None},
-    {"id": "alvin",    "name": "ALVIN",    "role": "Finance/Email",         "unit": "alvin.service",              "scope": "system", "type": "system_service",   "workspace": "/home/ubuntu/.openclaw/workspace/alvin",          "memory": None},
-    {"id": "aegis",    "name": "AEGIS",    "role": "Listener",              "unit": "openclaw-aegis.service",     "scope": "user",   "type": "listener",         "workspace": None,                                              "memory": None},
-    {"id": "oracle",   "name": "ORACLE",   "role": "Listener",              "unit": None,                         "scope": None,     "type": "listener_forked",  "workspace": "/home/ubuntu/.openclaw/agents/oracle",            "memory": None,  "process_path": "/home/ubuntu/.openclaw/agents/oracle/discord_listener.py"},
-    {"id": "scribe",   "name": "SCRIBE",   "role": "Listener",              "unit": None,                         "scope": None,     "type": "listener_forked",  "workspace": "/home/ubuntu/.openclaw/agents/scribe",            "memory": None,  "process_path": "/home/ubuntu/.openclaw/agents/scribe/discord_listener.py"},
-    {"id": "medic",    "name": "MEDIC",    "role": "Fleet Watchdog",        "unit": "openclaw-medic.service",     "scope": "user",   "type": "monitor",          "workspace": "/home/ubuntu/owen-hunt-medic",                    "memory": None},
-    {"id": "winston",  "name": "WINSTON",  "role": "Builder (Claude CLI)",  "unit": None,                         "scope": None,     "type": "cli_invocation",   "workspace": "/home/ubuntu/winston-logs",                       "memory": "/home/ubuntu/winston-persona.md",  "process_path": None},
-    {"id": "chron",    "name": "CHRON",    "role": "Reviewer (Codex CLI)",  "unit": None,                         "scope": None,     "type": "cli_invocation",   "workspace": "/home/ubuntu/chron-logs",                         "memory": "/home/ubuntu/chron-persona.md",    "process_path": None},
-    {"id": "sinclair", "name": "SINCLAIR", "role": "Architect (Cowork)",    "unit": None,                         "scope": None,     "type": "remote",           "workspace": None,                                              "memory": None},
+    {
+        "id": "marvis",
+        "name": "MARVIS",
+        "role": "Commander",
+        "unit": "com.openclaw.gateway",
+        "scope": "launchd",
+        "type": "gateway",
+        "workspace": None,
+        "memory": os.path.join(OPENCLAW, "MEMORY.md"),
+        "log_path": _log("gateway.log"),
+        "err_path": _log("gateway.err"),
+    },
+    {
+        "id": "forge",
+        "name": "FORGE",
+        "role": "Health Coach",
+        "unit": "com.openclaw.gateway",
+        "scope": "launchd",
+        "type": "openclaw",
+        "workspace": os.path.join(OPENCLAW, "forge-workspace"),
+        "memory": os.path.join(OPENCLAW, "forge-workspace", "MEMORY.md"),
+        "log_path": _log("gateway.log"),
+        "err_path": _log("gateway.err"),
+    },
+    {
+        "id": "edward",
+        "name": "EDWARD",
+        "role": "Engineering",
+        "unit": "com.openclaw.gateway",
+        "scope": "launchd",
+        "type": "openclaw",
+        "workspace": None,
+        "memory": None,
+        "log_path": _log("gateway.log"),
+        "err_path": _log("gateway.err"),
+    },
+    {
+        "id": "beacon",
+        "name": "BEACON",
+        "role": "Briefings",
+        "unit": "com.openclaw.gateway",
+        "scope": "launchd",
+        "type": "openclaw",
+        "workspace": None,
+        "memory": None,
+        "log_path": _log("gateway.log"),
+        "err_path": _log("gateway.err"),
+    },
+    {
+        "id": "aegis",
+        "name": "AEGIS",
+        "role": "Listener",
+        "unit": "com.openclaw.aegis",
+        "scope": "launchd",
+        "type": "listener",
+        "workspace": os.path.join(OPENCLAW, "agents", "aegis"),
+        "memory": None,
+        "log_path": _log("aegis.log"),
+        "err_path": _log("aegis.err"),
+    },
+    {
+        "id": "oracle",
+        "name": "ORACLE",
+        "role": "Listener",
+        "unit": "com.openclaw.oracle",
+        "scope": "launchd",
+        "type": "listener",
+        "workspace": os.path.join(OPENCLAW, "agents", "oracle"),
+        "memory": None,
+        "log_path": _log("oracle.log"),
+        "err_path": _log("oracle.err"),
+    },
+    {
+        "id": "scribe",
+        "name": "SCRIBE",
+        "role": "Listener",
+        "unit": "com.openclaw.scribe",
+        "scope": "launchd",
+        "type": "listener",
+        "workspace": os.path.join(OPENCLAW, "agents", "scribe"),
+        "memory": None,
+        "log_path": _log("scribe.log"),
+        "err_path": _log("scribe.err"),
+    },
+    {
+        "id": "medic",
+        "name": "MEDIC",
+        "role": "Fleet Watchdog",
+        "unit": "com.openclaw.medic",
+        "scope": "launchd",
+        "type": "monitor",
+        "workspace": OPENCLAW,
+        "memory": None,
+        "log_path": _log("medic.log"),
+        "err_path": _log("medic.err"),
+    },
+    {
+        "id": "api_proxy",
+        "name": "API PROXY",
+        "role": "Model/API proxy",
+        "unit": "com.openclaw.api-proxy",
+        "scope": "launchd",
+        "type": "agent_platform",
+        "workspace": OPENCLAW,
+        "memory": None,
+        "log_path": _log("api-proxy.log"),
+        "err_path": _log("api-proxy.err"),
+    },
+    {
+        "id": "mlx_server",
+        "name": "MLX SERVER",
+        "role": "Local model endpoint",
+        "unit": "com.openclaw.mlx-server",
+        "scope": "launchd",
+        "type": "model_server",
+        "workspace": os.path.join(HOME, "ollama", "mlx"),
+        "memory": None,
+        "log_path": _log("mlx-server.log"),
+        "err_path": _log("mlx-server.err"),
+    },
+    {
+        "id": "marvis_voice",
+        "name": "MARVIS VOICE",
+        "role": "Voice interface",
+        "unit": "com.openclaw.marvis-voice",
+        "scope": "launchd",
+        "type": "agent_platform",
+        "workspace": OPENCLAW,
+        "memory": None,
+        "log_path": _log("marvis-voice.log"),
+        "err_path": _log("marvis-voice.err"),
+    },
+    {
+        "id": "winston",
+        "name": "WINSTON",
+        "role": "Builder (Claude CLI)",
+        "unit": None,
+        "scope": None,
+        "type": "cli_invocation",
+        "workspace": os.path.join(HOME, "winston-logs"),
+        "memory": os.path.join(HOME, "winston-persona.md"),
+        "process_path": None,
+    },
+    {
+        "id": "chron",
+        "name": "CHRON",
+        "role": "Reviewer (Codex CLI)",
+        "unit": None,
+        "scope": None,
+        "type": "cli_invocation",
+        "workspace": os.path.join(HOME, "chron-logs"),
+        "memory": os.path.join(HOME, "chron-persona.md"),
+        "process_path": None,
+    },
+    {
+        "id": "sinclair",
+        "name": "SINCLAIR",
+        "role": "Architect (Cowork)",
+        "unit": None,
+        "scope": None,
+        "type": "remote",
+        "workspace": None,
+        "memory": None,
+    },
 ]
 
 
@@ -26,9 +187,27 @@ def get_agent_by_id(agent_id):
     return next((a for a in AGENT_FLEET if a["id"] == agent_id), None)
 
 
+def _is_launchd(scope, unit=None):
+    return scope == "launchd" or (unit or "").startswith("com.")
+
+
 def get_unit_status(unit, scope):
-    """Check systemd unit status. Returns 'active', 'inactive', 'failed', or 'unknown'."""
+    """Check launchd or systemd unit status."""
+    if not unit:
+        return "unknown"
     try:
+        if _is_launchd(scope, unit):
+            result = subprocess.run(
+                ["launchctl", "list", unit],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode != 0:
+                return "inactive"
+            has_pid = '"PID" =' in result.stdout or "\t\"PID\" =" in result.stdout
+            return "active" if has_pid else "inactive"
+
         cmd = ["systemctl"]
         if scope == "user":
             cmd.append("--user")
@@ -39,14 +218,32 @@ def get_unit_status(unit, scope):
         return "unknown"
 
 
+def restart_unit(unit, scope):
+    """Restart a launchd or systemd unit and return the subprocess result."""
+    if _is_launchd(scope, unit):
+        return subprocess.run(
+            ["launchctl", "kickstart", "-k", f"gui/{os.getuid()}/{unit}"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    cmd = ["systemctl"]
+    if scope == "user":
+        cmd.append("--user")
+    cmd.extend(["restart", unit])
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+
+
 def get_listener_forked_status(process_path):
     """Check if a forked listener process is running via pgrep."""
     if not process_path:
         return "unknown"
     try:
         out = subprocess.run(
-            ["pgrep", "-af", process_path],
-            capture_output=True, text=True, timeout=2
+            ["pgrep", "-fl", process_path],
+            capture_output=True,
+            text=True,
+            timeout=2,
         ).stdout.strip()
         return "active" if out else "inactive"
     except (subprocess.SubprocessError, OSError):
@@ -58,7 +255,6 @@ def get_cli_status(workspace):
     if not workspace or not os.path.isdir(workspace):
         return "idle", None
     try:
-        # Find most recently modified file in the logs dir
         newest_mtime = 0
         for entry in os.scandir(workspace):
             if entry.is_file():
@@ -67,14 +263,16 @@ def get_cli_status(workspace):
                     newest_mtime = mt
         if newest_mtime == 0:
             return "idle", None
-        last_dt = datetime.fromtimestamp(newest_mtime, tz=timezone.utc)
-        return "idle", last_dt.strftime("%Y-%m-%d %H:%M UTC")
+        return "idle", _format_timestamp(newest_mtime)
     except OSError:
         return "idle", None
 
 
-def get_last_seen(unit, scope):
-    """Get most recent journal entry timestamp for a systemd unit."""
+def get_last_seen(unit, scope, log_path=None, err_path=None):
+    """Get most recent activity timestamp for a unit."""
+    if _is_launchd(scope, unit):
+        newest = _newest_mtime([log_path, err_path])
+        return _format_timestamp(newest) if newest else None
     if not unit:
         return None
     try:
@@ -85,7 +283,6 @@ def get_last_seen(unit, scope):
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
         line = result.stdout.strip()
         if line:
-            # First token is the ISO timestamp
             parts = line.split(" ", 1)
             return parts[0] if parts else None
     except (subprocess.SubprocessError, OSError):
@@ -100,7 +297,9 @@ def get_workspace_size(path):
     try:
         result = subprocess.run(
             ["du", "-sh", path],
-            capture_output=True, text=True, timeout=10
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         return result.stdout.split()[0] if result.stdout.strip() else None
     except (subprocess.SubprocessError, OSError, IndexError):
@@ -115,16 +314,17 @@ def get_memory_size(path):
         size = os.path.getsize(path)
         if size < 1024:
             return f"{size} B"
-        elif size < 1024 * 1024:
+        if size < 1024 * 1024:
             return f"{size // 1024} KB"
-        else:
-            return f"{size // (1024 * 1024)} MB"
+        return f"{size // (1024 * 1024)} MB"
     except OSError:
         return None
 
 
-def get_journal_lines(unit, scope, n=50):
-    """Get last N lines from a systemd unit's journal."""
+def get_journal_lines(unit, scope, n=50, log_path=None, err_path=None):
+    """Get recent lines from launchd log files or a systemd journal."""
+    if _is_launchd(scope, unit):
+        return _tail_files([log_path, err_path], n=n)
     if not unit:
         return None
     try:
@@ -154,10 +354,9 @@ def gather_fleet_status():
             "has_unit": agent.get("unit") is not None,
             "scope": agent.get("scope"),
             "unit": agent.get("unit"),
-            "can_restart": agent.get("scope") == "user" and agent.get("unit") is not None,
+            "can_restart": agent.get("scope") in {"user", "launchd"} and agent.get("unit") is not None,
         }
 
-        # Status
         if agent["type"] == "remote":
             row["status"] = "remote"
         elif agent["type"] == "cli_invocation":
@@ -169,15 +368,56 @@ def gather_fleet_status():
         elif agent.get("unit"):
             row["status"] = get_unit_status(agent["unit"], agent["scope"])
 
-        # Last seen (from journal, if we have a unit and didn't already set it)
         if not row["last_seen"] and agent.get("unit"):
-            row["last_seen"] = get_last_seen(agent["unit"], agent["scope"])
+            row["last_seen"] = get_last_seen(
+                agent["unit"],
+                agent["scope"],
+                log_path=agent.get("log_path"),
+                err_path=agent.get("err_path"),
+            )
 
-        # Workspace size
         row["workspace_size"] = get_workspace_size(agent.get("workspace"))
-
-        # Memory size
         row["memory_size"] = get_memory_size(agent.get("memory"))
 
         fleet.append(row)
     return fleet
+
+
+def _newest_mtime(paths):
+    newest = 0
+    for path in paths:
+        if not path:
+            continue
+        try:
+            newest = max(newest, os.path.getmtime(path))
+        except OSError:
+            pass
+    return newest
+
+
+def _format_timestamp(epoch):
+    if not epoch:
+        return None
+    return datetime.fromtimestamp(epoch, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def _tail_files(paths, n=50):
+    existing = [path for path in paths if path and os.path.exists(path)]
+    if not existing:
+        return None
+    parts = []
+    for path in existing:
+        try:
+            result = subprocess.run(
+                ["tail", "-n", str(n), path],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            parts.append(f"==> {path} <==\nRead error: {exc}")
+            continue
+        body = result.stdout.strip()
+        if body:
+            parts.append(f"==> {path} <==\n{body}")
+    return "\n\n".join(parts) if parts else None

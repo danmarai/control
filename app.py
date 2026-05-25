@@ -1,4 +1,4 @@
-"""Control — fleet ops portal for Dan's EC2 enterprise."""
+"""Control - fleet ops portal for Dan's Mac Studio."""
 
 import glob
 import hashlib
@@ -18,7 +18,7 @@ from lib.registry import load_registry, merge_projects
 from lib.discovery import discover_all
 from lib.agents import (
     AGENT_FLEET, get_agent_by_id, gather_fleet_status,
-    get_journal_lines, get_listener_forked_status,
+    get_journal_lines, get_listener_forked_status, restart_unit,
 )
 from lib.agent_dispatch import read_agent_ledger, read_agent_task_files, resolve_log_path
 
@@ -428,25 +428,27 @@ def project_log_tail(project_id):
 
 @app.route("/api/medic/recent")
 def api_medic_recent():
-    """Last 30 lines from openclaw-medic.service user journal."""
-    try:
-        out = subprocess.run(
-            ["journalctl", "--user", "-u", "openclaw-medic.service",
-             "-n", "30", "--no-pager", "--output=short-iso"],
-            capture_output=True, text=True, timeout=5
-        ).stdout
-        if not out.strip():
-            return Response("No recent medic activity in journal.", 200, mimetype="text/plain")
-        return Response(out, 200, mimetype="text/plain")
-    except (subprocess.SubprocessError, OSError) as e:
-        return Response(f"journalctl error: {e}", 500, mimetype="text/plain")
+    """Last 30 lines from the launchd MEDIC logs."""
+    agent = get_agent_by_id("medic")
+    if not agent:
+        return Response("MEDIC is not configured.", 404, mimetype="text/plain")
+    out = get_journal_lines(
+        agent.get("unit"),
+        agent.get("scope"),
+        n=30,
+        log_path=agent.get("log_path"),
+        err_path=agent.get("err_path"),
+    )
+    if not out:
+        return Response("No recent medic activity in logs.", 200, mimetype="text/plain")
+    return Response(out, 200, mimetype="text/plain")
 
 
 # --- Agent API routes ---
 
 @app.route("/api/agents/<agent_id>/log")
 def api_agent_log(agent_id):
-    """Last 50 journal lines for an agent's unit (or pgrep output for forked)."""
+    """Last 50 log lines for an agent's unit (or pgrep output for forked)."""
     agent = get_agent_by_id(agent_id)
     if not agent:
         return Response(f"Unknown agent: {agent_id}", 404, mimetype="text/plain")
@@ -456,7 +458,7 @@ def api_agent_log(agent_id):
         if pp:
             try:
                 out = subprocess.run(
-                    ["pgrep", "-af", pp],
+                    ["pgrep", "-fl", pp],
                     capture_output=True, text=True, timeout=2
                 ).stdout
                 return Response(out or "No matching process found.", 200, mimetype="text/plain")
@@ -470,17 +472,23 @@ def api_agent_log(agent_id):
     unit = agent.get("unit")
     scope = agent.get("scope")
     if not unit:
-        return Response("No systemd unit configured for this agent.", 404, mimetype="text/plain")
+        return Response("No service unit configured for this agent.", 404, mimetype="text/plain")
 
-    out = get_journal_lines(unit, scope, n=50)
+    out = get_journal_lines(
+        unit,
+        scope,
+        n=50,
+        log_path=agent.get("log_path"),
+        err_path=agent.get("err_path"),
+    )
     if out:
         return Response(out, 200, mimetype="text/plain")
-    return Response("No recent journal entries.", 200, mimetype="text/plain")
+    return Response("No recent log entries.", 200, mimetype="text/plain")
 
 
 @app.route("/api/agents/<agent_id>/restart", methods=["POST"])
 def api_agent_restart(agent_id):
-    """Restart a user-systemd agent. Disabled by default until SSO + CSRF."""
+    """Restart an agent service. Disabled by default until SSO + CSRF."""
     if not ALLOW_RESTART_ACTIONS:
         return jsonify({"error": "restart actions disabled — Phase 1.3"}), 503
 
@@ -491,16 +499,13 @@ def api_agent_restart(agent_id):
     agent = get_agent_by_id(agent_id)
     if not agent:
         return jsonify({"error": f"unknown agent: {agent_id}"}), 404
-    if agent.get("scope") != "user" or not agent.get("unit"):
-        return jsonify({"error": f"agent {agent_id} is not a restartable user-systemd unit"}), 400
+    if agent.get("scope") not in ("user", "launchd") or not agent.get("unit"):
+        return jsonify({"error": f"agent {agent_id} is not a restartable service"}), 400
 
     _audit_log("restart", agent_id)
 
     try:
-        result = subprocess.run(
-            ["systemctl", "--user", "restart", agent["unit"]],
-            capture_output=True, text=True, timeout=15
-        )
+        result = restart_unit(agent["unit"], agent.get("scope"))
         if result.returncode == 0:
             return jsonify({"ok": True, "agent": agent_id, "unit": agent["unit"]})
         return jsonify({"error": result.stderr.strip()}), 500
